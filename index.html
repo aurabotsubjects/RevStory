@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>REVELATION · An Aurabot Project Animated Series</title>
+<meta name="description" content="Revelation: a cinematic animated series, faithful to the World English Bible. An Aurabot Project production.">
+<meta name="theme-color" content="#05060b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Cinzel:wght@600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/studio.css">
+</head>
+<body>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<header class="top">
+  <a class="brand" href="#" id="brandLink" aria-label="Aurabot Project">
+    <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="a" cx="60" cy="60" r="44"/><circle class="b" cx="60" cy="60" r="28"/><circle class="c" cx="60" cy="60" r="8"/></svg>
+    <span class="long">AURABOT <b>PROJECT</b></span>
+  </a>
+  <div class="top-actions">
+    <a class="cta-mini" href="#" id="topWatch" data-magnet>Watch now</a>
+    <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false"><span>Menu</span><span class="bars"><i></i><i></i></span></button>
+  </div>
+</header>
+
+<div class="menu" id="menu" aria-hidden="true">
+  <div class="panel">
+    <canvas id="menuCanvas"></canvas>
+    <nav id="menuNav"></nav>
+    <div class="menu-foot"><span>Revelation · WEB</span><span>An Aurabot Project production</span></div>
+  </div>
+</div>
+
+<main>
+  <section class="hero" id="top" style="max-width:none;padding:0">
+    <canvas class="bg" id="heroCanvas"></canvas>
+    <div class="hero-inner" id="heroInner">
+      <div class="presents">An Aurabot Project production</div>
+      <h1 class="h1" id="h1" aria-label="Revelation"></h1>
+      <div class="tag">An animated series &nbsp;·&nbsp; <span id="epCount">102</span> episodes &nbsp;·&nbsp; WEB</div>
+      <div class="hero-cta">
+        <a class="btn primary" href="#" id="heroWatch" data-magnet><i class="tri"></i><span id="heroWatchLabel">Watch Episode 1</span></a>
+        <a class="btn ghost" href="#episodes" data-magnet>Browse episodes</a>
+      </div>
+    </div>
+    <div class="scroll-hint"><span>Scroll</span><i></i></div>
+  </section>
+
+  <div class="marquee" aria-hidden="true"><div class="track" id="marq"></div></div>
+
+  <section id="about">
+    <div class="eyebrow reveal">The series</div>
+    <h2 class="h2 reveal">Every verse.<br>Nothing added.<br>Nothing taken away.</h2>
+    <p class="lead reveal">A cinematic, episode-by-episode journey through the Book of Revelation, built entirely in code and faithful to the World English Bible text. One minute at a time, from a lonely island at dawn to the new creation.</p>
+    <div class="stats reveal">
+      <div class="stat"><b data-count="102">0</b><span>Episodes</span></div>
+      <div class="stat"><b data-count="10">0</b><span>Parts</span></div>
+      <div class="stat"><b data-count="22">0</b><span>Chapters</span></div>
+      <div class="stat"><b data-count="404">0</b><span>Verses</span></div>
+    </div>
+  </section>
+
+  <section id="episodes">
+    <div class="eyebrow reveal">Watch</div>
+    <h2 class="h2 reveal">Episodes</h2>
+    <nav class="partnav" id="partnav"></nav>
+    <div id="parts"></div>
+  </section>
+</main>
+
+<footer id="studio">
+  <a class="brand" href="#top"><svg viewBox="0 0 120 120" width="34" height="34" aria-hidden="true"><circle class="a" cx="60" cy="60" r="44"/><circle class="b" cx="60" cy="60" r="28"/><circle class="c" cx="60" cy="60" r="8"/></svg><span>AURABOT <b>PROJECT</b></span></a>
+  Revelation · An animated series<br>Scripture: World English Bible (WEB), public domain.
+</footer>
+
+<!-- ============================ PLAYER ============================ -->
+<div class="player paused" id="player" role="dialog" aria-label="Episode player">
+  <div class="stage-wrap"><div class="stage" id="stage"></div></div>
+  <div class="loader"><div></div></div>
+  <div class="nogl" id="nogl"><div><h3 style="font-family:var(--serif)">WebGL is needed to play this series</h3><p style="color:var(--dim)">Please use a recent version of Chrome, Edge, Firefox or Safari.</p><button class="btn ghost" id="noglClose">Back</button></div></div>
+  <div class="ui" id="ui">
+    <div class="p-top">
+      <button class="p-back" id="pBack">← Episodes</button>
+      <div class="p-title"><small id="pKicker">Episode 1</small><b id="pTitle">The Unveiling</b></div>
+    </div>
+    <button class="bigplay" id="bigPlay" aria-label="Play"></button>
+    <div class="portrait-tip">Rotate your device for the full cinematic frame</div>
+    <div class="toast" id="toast"></div>
+    <div class="p-bottom">
+      <div class="scrub" id="scrub"><div class="rail"><div class="fill" id="sFill"></div><div class="knob" id="sKnob"></div><div class="tip" id="sTip">0:00</div></div></div>
+      <div class="ctrls">
+        <button class="ib" id="bPrev" aria-label="Previous episode"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12 18 6v12z"/></svg></button>
+        <button class="ib" id="bPlay" aria-label="Play or pause"><svg viewBox="0 0 24 24" id="icPlay"><path d="M8 5v14l11-7z"/></svg></button>
+        <button class="ib" id="bNext" aria-label="Next episode"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18V6l8.5 6z"/></svg></button>
+        <div class="time" id="pTime">0:00 / 1:00</div>
+        <div class="grow"></div>
+        <button class="ib" id="bCC" aria-label="Subtitles"><svg viewBox="0 0 24 24"><path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1zm7 0h-1.5v-.5h-2v3h2V13H18v1a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1z"/></svg></button>
+        <button class="ib" id="bMute" aria-label="Sound"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg></button>
+        <button class="qual" id="bQual">Auto</button>
+        <button class="ib" id="bFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="endcard" id="endcard">
+    <small id="ecKicker">Episode complete</small>
+    <h3 id="ecTitle"></h3>
+    <div class="row">
+      <button class="btn primary" id="ecNext"><i class="tri"></i><span id="ecNextLabel">Next episode</span></button>
+      <button class="btn ghost" id="ecReplay">Replay</button>
+      <button class="btn ghost" id="ecBack">All episodes</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/vendor/three.min.js"></script>
+<script src="js/vendor/three-postfx.js"></script>
+<script src="js/series-data.js"></script>
+<script src="js/built.js"></script>
+<script src="js/scripture-web.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/px/px-core.js"></script>
+<script src="js/px/px-lib.js"></script>
+<script src="js/engine-px.js"></script>
+<script src="js/lib-world.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/vendor/lame.min.js"></script>
+<script src="js/studio-dsp.js"></script>
+<script src="js/recorder.js"></script>
+</body>
+</html>
