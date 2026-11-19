@@ -1712,4 +1712,252 @@
     for (let k = 0; k < Math.round(7 * z); k++) for (let j = 0; j < Math.round(3.5 * z * (1 - k / (7 * z))); j++) px.set(x - Math.round(11 * z) - k, y - Math.round(10.5 * z) + j, px.ramp(iron, 0.18 + 0.3 * glow, k, j));   /* the horn */
     if (glow > 0.05 || hit > 0.05) lib.halo(x, y - 12 * z, 16 * z, hex('#ff8a2a'), 0.3 * glow + 0.6 * hit, 0.9);
   };
+
+  /* ============================================================================
+   *  EPISODE 10 ADDITIONS · Thyatira II
+   *  scepter (a rod of iron that rises from an ember), pot (a clay pot, to be shattered)
+   * ========================================================================== */
+  const CLAY = hexes(['#2a1008', '#5a2a14', '#8a4a24', '#c0763a', '#e8a060', '#fff0c8']);
+  lib.CLAY = CLAY;
+
+  /* o: {U, x, y (base), h (full height), k 0..1 (how much has risen), heat 0..1, t} */
+  lib.scepter = function (o) {
+    const U = o.U, k = o.k, h = o.h * k, x = Math.round(o.x), y = Math.round(o.y), w = o.w || 4, heat = o.heat === undefined ? 1 : o.heat, t = o.t;
+    if (k <= 0.01) return;
+    const iron = hexes(['#06070c', '#12141e', '#222838', '#3c4660', '#6a7898', '#aab6d0', '#f0f4ff']);
+    for (let j = 0; j < h; j++) {
+      const u = j / Math.max(1, o.h), hot = clamp((heat * (0.35 + 0.65 * u) + (j > h - 8 ? 0.4 * heat : 0)), 0, 1), Y = Math.round(y - j);
+      for (let i = -w; i <= w; i++) {
+        const f = (i + w) / (2 * w), band = (j % 14) < 2 ? 0.12 : 0;
+        let v = 0.2 + 0.5 * f * f + band;
+        let col = px.ramp(iron, clamp(v + (i === w ? 0.2 : 0), 0, 1), x + i, Y);
+        if (hot > 0.05) col = mix(col, px.ramp(lib.BRONZE, clamp(0.35 + 0.6 * hot - 0.2 * Math.abs(i) / w, 0, 1), x + i, Y), clamp(hot * 1.15, 0, 0.95));
+        px.set(x + i, Y, col);
+      }
+    }
+    const ty = Math.round(y - h), r = w + 3;
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r) px.set(x + dx, ty + dy - 1, px.ramp(lib.BRONZE, clamp((0.55 + 0.4 * heat) - 0.12 * dy / r - 0.1 * Math.abs(dx) / r, 0, 1), x + dx, ty + dy));      /* the knob at its head */
+    lib.halo(x, ty, 40 * (0.4 + 0.6 * heat) + 10, hex('#ffb040'), 0.6 * heat, 0.8);
+    lib.halo(x, y - h * 0.5, 30 + 0.2 * h, hex('#ff8a2a'), 0.25 * heat, 0.9);
+  };
+
+  /* a clay pot. o: {U, x, y (base), z, a, t} */
+  lib.pot = function (o) {
+    const U = o.U, z = o.z, x = Math.round(o.x), y = Math.round(o.y), a = o.a === undefined ? 1 : o.a;
+    for (let j = 0; j < 20 * z; j++) {
+      const u = j / (20 * z), w = Math.round(z * (u < 0.15 ? 3.5 + 20 * u : u < 0.7 ? 6.5 - 1.5 * Math.abs(u - 0.45) * 3 : 5 - (u - 0.7) * 10));
+      for (let i = -w; i <= w; i++) { const X = x + i, Y = y - j; if (a > px.thr(X, Y)) px.set(X, Y, px.ramp(CLAY, clamp(0.18 + 0.5 * (i + w) / (2 * w) + (i === w ? 0.15 : 0) + (j % 9 === 0 ? -0.08 : 0), 0, 1), X, Y)); }
+    }
+    for (let i = -Math.round(3 * z); i <= Math.round(3 * z); i++) if (a > px.thr(x + i, y - Math.round(20 * z))) px.set(x + i, y - Math.round(20 * z), px.ramp(CLAY, i > 0 ? 0.7 : 0.4, i, 0));
+  };
+
+  /* ============================================================================
+   *  EPISODES 12-15 ADDITIONS · Philadelphia, Laodicea, the door
+   *  HONEY / LUKE ramps, titleCard (shared title), key (the key of David), marks (glowing unreadable
+   *  glyphs), pillar (a white pillar that grows), lightFig (a figure of light, no face),
+   *  philadelphia (a small hill-town under a vast door of light, with storm / shield / tepid states)
+   * ========================================================================== */
+  const HONEY = hexes(['#1a0f08', '#3d2410', '#7a4a1a', '#b8802a', '#e8b04a', '#ffd987', '#fff3c8']);
+  const LUKE = hexes(['#26231d', '#3f3b30', '#625c4a', '#8a8266', '#b0a684', '#cfc6a2', '#e8e0bf']);
+  lib.HONEY = HONEY; lib.LUKE = LUKE;
+
+  /* the shared title card: o: {t0, t1, y} */
+  lib.titleCard = function (t, word, epNo, o) {
+    o = o || {};
+    const t0 = o.t0 === undefined ? 1.0 : o.t0, t1 = o.t1 === undefined ? 4.6 : o.t1;
+    const k = sstep(t0, t0 + 1.0, t) * (1 - sstep(t1 - 0.8, t1, t));
+    if (k <= 0.01) return;
+    const gold = [hex('#fff6d0'), hex('#ffe9a0'), hex('#ffd070'), hex('#f2a444'), hex('#c8702a'), hex('#8a4420')];
+    let sc = 4; if (px.textWidth(word, sc, 1) > 430) sc = 3;
+    const tw = px.textWidth(word, sc, 1), x0t = Math.round(240 - tw / 2), y0 = o.y === undefined ? 66 : o.y, fo = 1 - sstep(t1 - 0.8, t1, t);
+    px.scrim(240, y0 + 18, 232, 46, k * 1.05);
+    for (let i = 0; i < word.length; i++) {
+      const ka = clamp((t - t0 - 0.1 - i * 0.07) / 0.6, 0, 1) * fo; if (ka <= 0) continue;
+      const lx = x0t + i * 6 * sc, ch = word[i];
+      px.text(ch, lx + 2, y0 + 2, sc, hex('#0a0408'), ka);
+      const sweep = lerp(-40, 440, sstep(t0 + 1.1, t0 + 2.6, t));
+      px.text(ch, lx, y0, sc, (cc, r, X, Y) => { let col = px.ramp(gold, (r + 1) / (7 * sc), X, Y); const d = (X - Y * 0.7) - sweep; if (d > 0 && d < 8) col = hex(d < 4 ? '#ffffff' : '#fff0c0'); return col; }, ka);
+    }
+    const sub = 'REVELATION · EPISODE ' + epNo, sw = px.textWidth(sub, 2, 1), sx0 = Math.round(240 - sw / 2), sy0 = y0 - 17, ks = sstep(t0 - 0.1, t0 + 0.8, t) * fo;
+    px.text(sub, sx0 + 1, sy0 + 1, 2, hex('#0a0408'), ks); px.text(sub, sx0, sy0, 2, hex('#e8c070'), ks);
+    const rule = Math.round(lerp(0, 150, sstep(t0 + 0.6, t0 + 2.0, t))); px.hline(240 - rule, 240 + rule, y0 + 7 * sc + 8, mix(hex('#e8c070'), hex('#0a0408'), 0.15 + (1 - k) * 0.8));
+  };
+
+  /* the key of David: a golden key about 40 units tall. o: {x, y (middle of the shaft), z, k 0..1, rot (turning, radians), t, glow} */
+  lib.key = function (o) {
+    const k = o.k === undefined ? 1 : o.k; if (k <= 0.01) return;
+    const z = o.z, x0 = o.x, y0 = o.y, cs = Math.max(0.16, Math.abs(Math.cos(o.rot || 0))), t = o.t;
+    lib.halo(Math.round(x0), Math.round(y0), 38 * z, hex('#ffd890'), 0.55 * k * (o.glow === undefined ? 1 : o.glow), 1);
+    const bx0 = Math.floor(x0 - 9 * z), bx1 = Math.ceil(x0 + 9 * z), by0 = Math.floor(y0 - 26 * z), by1 = Math.ceil(y0 + 22 * z);
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) {
+      const u = (x - x0) / z / cs, v = (y0 - y) / z;
+      let m = 0, sh = 0.6;
+      const rd = Math.hypot(u, v - 17);
+      if (rd < 6.2 && rd > 3) { m = 1; sh = 0.55 + 0.35 * (-u / 6) + 0.12 * (v - 17) / 6; }
+      else if (Math.abs(u) < 0.95 && v > -17 && v < 11) { m = 1; sh = 0.5 + 0.4 * (-u / 0.95); }
+      else if (Math.abs(u) < 2.4 && v > 10 && v < 13) { m = 1; sh = 0.72 - 0.2 * Math.abs(u) / 2.4; }
+      else if (u >= 0.9 && u < 6.4 && v > -17 && v < -7.5) {
+        const notch = (v > -14.6 && v < -12.6 && u > 3.2) || (v > -11 && v < -9.2 && u > 2.2);
+        if (!notch) { m = 1; sh = 0.62 + 0.2 * (v + 17) / 9.5; }
+      }
+      if (!m) continue;
+      if (k < 1 && k <= thr(x, y)) continue;
+      px.set(x, y, px.ramp(HONEY, clamp(sh + 0.1 * Math.sin(t * 2.2 + v * 0.3), 0, 1), x, y));
+    }
+    const g = 0.5 + 0.5 * Math.sin(t * 3.1);
+    if (g > 0.6) { const gx = Math.round(x0 - 3 * z * cs), gy = Math.round(y0 - 17 * z - 5 * z); for (let d = 1; d < 5; d++) { px.dpx(gx + d, gy, hex('#ffffff'), k * (1 - d / 5)); px.dpx(gx - d, gy, hex('#ffffff'), k * (1 - d / 5)); px.dpx(gx, gy + d, hex('#ffffff'), k * (1 - d / 5)); px.dpx(gx, gy - d, hex('#ffffff'), k * (1 - d / 5)); } px.set(gx, gy, hex('#ffffff')); }
+  };
+
+  /* a row of n glowing marks in a hand we cannot read; k 0..1 lights them one by one. o: {sp, h, col} */
+  lib.marks = function (x, y, n, k, t, seed, o) {
+    o = o || {}; const sp = o.sp || 5, hgt = o.h || 5;
+    for (let m = 0; m < n; m++) {
+      const lt = clamp(k * (n + 1) - m, 0, 1); if (lt <= 0.01) continue;
+      const mx = Math.round(x + (m - (n - 1) / 2) * sp), kind = (hash(m, seed, 92) * 4) | 0, yy = Math.round(y);
+      const c = mix(hex('#d8a040'), hex('#fff0b0'), (0.45 + 0.4 * Math.sin(t * 2 + m + seed)) * (lt < 1 ? 1.4 : 1));
+      for (let j = 0; j < hgt; j++) {
+        px.dpx(mx, yy + j, c, lt);
+        if (kind === 1 && j === 0) px.dpx(mx + 1, yy, c, lt);
+        if (kind === 2 && j === hgt - 1) px.dpx(mx + 1, yy + j, c, lt);
+        if (kind === 3 && j === (hgt >> 1)) px.dpx(mx - 1, yy + j, c, lt);
+        if (kind === 0 && j === 1) px.dpx(mx + 1, yy + j, c, lt);
+      }
+      lib.halo(mx, yy + (hgt >> 1), 9, hex('#ffd890'), 0.3 * lt, 1);
+    }
+  };
+
+  /* a white marble pillar that grows from its base. o: {x, y (base), h (px), w (half width), k 0..1, a, glow, t, marks [k1,k2,k3]} */
+  lib.pillar = function (o) {
+    const k = o.k; if (k <= 0.01) return;
+    const WH = hexes(['#4a4658', '#7a748c', '#aaa6bc', '#d4d0e0', '#f2f0fa', '#ffffff']);
+    const hh = Math.round(o.h * k), w = o.w, x = Math.round(o.x), y = Math.round(o.y), a = o.a === undefined ? 1 : o.a, gl = o.glow === undefined ? 1 : o.glow;
+    lib.halo(x, y - Math.round(hh * 0.5), Math.max(34, hh * 0.9), hex('#ffe9b0'), 0.42 * gl * a, 1.1);
+    for (let j = 0; j < hh; j++) {
+      const Y = y - j; if (Y < 0 || Y >= H) continue;
+      const base = j < 7, cap = hh - j <= 9 && k > 0.97, ww = Math.round(w * (1 - 0.05 * j / Math.max(1, o.h)) + (base ? 3 - j * 0.3 : 0) + (cap ? 3 : 0));
+      for (let i = -ww; i <= ww; i++) {
+        const X = x + i; if (X < 0 || X >= W || a <= thr(X, Y)) continue;
+        const u = i / Math.max(1, ww);
+        let v = 0.5 + 0.38 * u + (((i + 400) % 5) === 0 && !base && !cap ? -0.08 : 0) + 0.06 * (1 - j / Math.max(1, hh));
+        if (j === 7 || (cap && hh - j === 9) || (cap && hh - j === 1)) v -= 0.22;
+        px.set(X, Y, px.ramp(WH, clamp(v, 0, 1), X, Y));
+      }
+    }
+    const mk = o.marks || [0, 0, 0];
+    for (let q = 0; q < 3; q++) if (mk[q] > 0.01) lib.marks(x, y - hh * (0.3 + q * 0.17), 3, mk[q], o.t, 4 + q, { sp: Math.max(4, Math.round(w * 0.55)), h: 5 });
+  };
+
+  /* a figure of light (white-gold, no face). o: {x, y (feet / hidden base), h, a, t, seed, sway, glow} */
+  lib.lightFig = function (o) {
+    const h = o.h, x = o.x, y = o.y, a = o.a === undefined ? 1 : o.a, t = o.t, seed = o.seed || 0, sway = o.sway || 0, glow = o.glow === undefined ? 1 : o.glow;
+    if (a <= 0.01) return;
+    const head = Math.max(2, Math.round(h * 0.1));
+    lib.halo(Math.round(x), Math.round(y - h * 0.55), h * 1.0, hex('#fff0c0'), 0.45 * a * glow, 1.1);
+    for (let r = 0; r <= h; r++) {
+      const f = r / h, hw = f < 0.1 ? head * 0.9 : lerp(h * 0.14, h * 0.3, sstep(0.1, 1, f)), yy = Math.round(y - h + r);
+      if (yy < 0 || yy >= H) continue;
+      for (let dx = -Math.ceil(hw); dx <= Math.ceil(hw); dx++) {
+        if (Math.abs(dx) > hw) continue;
+        const u = dx / Math.max(1, hw), X = Math.round(x + dx + Math.sin(t * 1.6 + seed + f * 3) * sway * f);
+        if (a <= thr(X, yy)) continue;
+        px.set(X, yy, px.ramp(GOLDW, clamp(0.78 - 0.18 * u + 0.12 * (1 - f) + (Math.abs(u) > 0.86 ? 0.18 : 0), 0, 1), X, yy));
+      }
+    }
+    for (let dy = -head; dy <= head; dy++) for (let dx = -head; dx <= head; dx++) if (dx * dx + dy * dy <= head * head) { const X = Math.round(x) + dx, Y = Math.round(y - h - head * 0.5) + dy; if (a > thr(X, Y)) px.set(X, Y, px.ramp(GOLDW, clamp(0.92 - 0.12 * dx / head, 0, 1), X, Y)); }
+  };
+
+  /* ---------------------------------------------------------- PHILADELPHIA
+   * A small town on a hill under a vast door of light standing in the sky.
+   * Screen = (240 + (wx - cx) * z, 112 + (wy - cy) * z). The hill is near wx = 20; the door stands at wx = 60.
+   * o: {t, z, cx, cy, lit 0..1, door 0..1 (leaves swung open), dusk 0..1, storm 0..1, shield 0..1, tepid 0..1, flash 0..1}
+   * returns {sX, sY, z, groundY(wx), doorX, doorY} so an episode can stand figures on the ground. */
+  const PHIL_SKY = hexes(['#1e1226', '#3e2238', '#7a3c44', '#bc5e44', '#ee9650', '#ffcb7c', '#fff0c0']);
+  const PHIL_DUSK = hexes(['#0c0a14', '#1a1424', '#2c1e30', '#463040', '#6a4448', '#8a5a4c', '#b07a58']);
+  const DOORX = 60, DOORW = 40, DOORT = -96, DOORB = -2, DOORC = DOORT + DOORW;
+  const hillY = (wx) => 30 - 40 * Math.exp(-Math.pow((wx - 20) / 75, 2));
+  const fgY = (wx) => 70 + 0.12 * (wx + 60) + 3 * Math.sin(wx * 0.07);
+  lib.philadelphia = function (o) {
+    const U = px.cur(), t = o.t, z = o.z || 1, cx = o.cx || 0, cy = o.cy || 0, lit = o.lit === undefined ? 1 : o.lit, door = o.door === undefined ? 1 : o.door;
+    const dusk = o.dusk || 0, storm = o.storm || 0, shield = o.shield || 0, tepid = o.tepid || 0, flash = o.flash || 0;
+    const sX = (wx) => 240 + (wx - cx) * z, sY = (wy) => 112 + (wy - cy) * z, wX = (sx) => cx + (sx - 240) / z, wY = (sy) => cy + (sy - 112) / z;
+    const skyR = px.mixRamp(PHIL_SKY, PHIL_DUSK, dusk), HZ = 6;
+    /* sky and the door of light */
+    for (let y = 0; y < H; y++) {
+      const wy = wY(y);
+      for (let x = 0; x < W; x++) {
+        const wx = wX(x);
+        const dd = Math.hypot((wx - DOORX) * 0.8, (wy - (DOORT + DOORB) / 2) * 0.55);
+        let v = clamp(0.1 + 0.58 * sstep(-130, 8, wy), 0, 1) + 0.5 * lit * Math.exp(-dd * dd / 9000) * (0.4 + 0.6 * door) + 0.14 * (px.fbm(wx * 0.02 + t * 0.012, wy * 0.045, 3, 21) - 0.5);
+        let col = px.ramp(skyR, clamp(v, 0, 1), x, y);
+        const ax = (wx - DOORX) / DOORW;
+        const inside = Math.abs(ax) <= 1 && ((wy >= DOORC && wy <= DOORB) || (wy < DOORC && Math.hypot(wx - DOORX, wy - DOORC) <= DOORW));
+        if (inside) {
+          const edge = Math.min(1 - Math.abs(ax), wy < DOORC ? (DOORW - Math.hypot(wx - DOORX, wy - DOORC)) / DOORW : 1);
+          col = edge < 0.07 ? px.ramp(HONEY, 0.3 + 0.2 * lit, x, y) : px.ramp(HONEY, clamp(0.78 + 0.22 * lit * (0.5 + 0.5 * (wy - DOORT) / (DOORB - DOORT)) + 0.05 * px.fbm(wx * 0.05, wy * 0.1 - t * 0.2, 2, 7), 0, 1), x, y);
+          if (lit < 0.97) col = mix(col, px.ramp(skyR, 0.45, x, y), 1 - lit);
+        } else if (door > 0.04) {                                     /* the two leaves, swung wide open */
+          const L = 9 * door, dl = (DOORX - DOORW) - wx, dr = wx - (DOORX + DOORW);
+          if (((dl > 0 && dl < L) || (dr > 0 && dr < L)) && wy > DOORT + 26 - 8 * (dl > 0 ? dl : dr) / L && wy < DOORB + 2) col = px.ramp(HONEY, 0.16 + 0.22 * (1 - (dl > 0 ? dl : dr) / L) * lit, x, y);
+        }
+        U[y * W + x] = col;
+      }
+    }
+    /* far ridges */
+    for (let L = 0; L < 2; L++) for (let x = 0; x < W; x++) {
+      const wx = wX(x), top = HZ + (L ? 4 : -8) - (L ? 12 : 9) * px.fbm(wx * (L ? 0.016 : 0.011) + 3 + L * 9, 0.5, 3, 7 + L) - 5 * Math.sin(wx * 0.02 + L);
+      const y0 = Math.max(0, Math.floor(sY(top)));
+      for (let y = y0; y < H; y++) U[y * W + x] = px.ramp(skyR, (L ? 0.2 : 0.3) + 0.1 * lit * Math.exp(-Math.pow((wx - DOORX) / 100, 2)) + 0.03 * (y === y0 ? 1 : 0), x, y);
+    }
+    /* the hill, its houses */
+    const HILL = hexes(['#0a0608', '#180e0e', '#2a1a14', '#4a2e20', '#7a4a2c', '#b07a44']);
+    for (let x = 0; x < W; x++) {
+      const wx = wX(x), y0 = Math.max(0, Math.round(sY(hillY(wx))));
+      for (let y = y0; y < H; y++) { const d = y - y0; U[y * W + x] = px.ramp(HILL, clamp(0.16 + 0.42 * lit * Math.exp(-Math.pow((wx - DOORX) / 90, 2)) + 0.1 * px.fbm(wx * 0.06, (wY(y)) * 0.08, 2, 3) - 0.004 * d + (d < 2 ? 0.18 * lit : 0), 0, 1), x, y); }
+    }
+    const rows = [];
+    for (let i = 0; i < 26; i++) { const wx = -62 + i * 7.4 + 5 * hash(i, 1, 40), by = hillY(wx) + 1 + 6 * hash(i, 2, 40) - 3; rows.push({ i, wx, by, w: 8 + 6 * hash(i, 3, 40), h: 6 + 5 * hash(i, 4, 40) }); }
+    rows.sort((a, b) => a.by - b.by);
+    for (const r of rows) {
+      const x0 = Math.round(sX(r.wx - r.w / 2)), x1 = Math.round(sX(r.wx + r.w / 2)), yb = Math.round(sY(r.by)), yt = Math.round(sY(r.by - r.h)), rh = Math.max(2, Math.round(3 * z));
+      const lv = lit * (0.35 + 0.65 * Math.exp(-Math.pow((r.wx - DOORX) / 80, 2)));
+      for (let y = yt; y <= yb; y++) for (let x = x0; x <= x1; x++) { const f = (x - x0) / Math.max(1, x1 - x0); px.set(x, y, px.ramp(HILL, clamp(0.16 + 0.5 * lv * (0.6 + 0.5 * f) + (y < yt + rh ? -0.05 : 0), 0, 1), x, y)); }
+      for (let q = 0; q < rh; q++) for (let x = x0 - 1 + q; x <= x1 + 1 - q; x++) px.set(x, yt - rh + q + 1, px.ramp(HILL, clamp(0.1 + 0.3 * lv * (x > (x0 + x1) / 2 ? 1 : 0.5), 0, 1), x, yt - rh + q));
+      const nw = 2 + (r.i % 2);
+      for (let q = 0; q < nw; q++) { const wx2 = Math.round(x0 + (x1 - x0) * (nw === 1 ? 0.5 : 0.3 + 0.4 * q)), wy2 = yt + Math.max(2, Math.round((yb - yt) * 0.4)); const wl = Math.min(1, lit * (1.1 + 0.3 * Math.sin(t * 2 + r.i * 3 + q))); px.set(wx2, wy2, wl > thr(wx2, wy2) ? hex('#ffe08a') : hex('#b8802a')); px.set(wx2, wy2 + 1, hex('#f2a444')); if (z > 1.3) { px.set(wx2 + 1, wy2, hex('#ffe08a')); px.set(wx2 + 1, wy2 + 1, hex('#f2a444')); } }
+    }
+    /* the great ray of light falling from the door onto the town */
+    const dsx = sX(DOORX), dsy = sY(DOORB);
+    if (lit > 0.05) for (let y = Math.max(0, Math.round(dsy)); y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = x - dsx, dy = y - dsy, d = Math.hypot(dx, dy); if (d < 4) continue;
+      const m = 0.5 + 0.5 * Math.sin(Math.atan2(dx, dy) * 7 + 1.3 + t * 0.2), q = (m - 0.6) * 2.2 * lit * Math.exp(-d / (190 * z)) * (0.3 + 0.7 * door);
+      if (q > thr(x, y)) U[y * W + x] = mix(U[y * W + x], hex('#ffe9b0'), 0.18);
+    }
+    lib.halo(Math.round(dsx), Math.round(dsy - 10 * z), 120 * z, hex('#ffe0a0'), 0.4 * lit * door, 0.9);
+    /* the foreground slope and its grass */
+    for (let x = 0; x < W; x++) {
+      const wx = wX(x), y0 = Math.max(0, Math.round(sY(fgY(wx))));
+      for (let y = y0; y < H; y++) U[y * W + x] = px.ramp(HILL, clamp(0.07 + 0.2 * lit * Math.exp(-Math.pow((wx - DOORX) / 120, 2)) - 0.0018 * (y - y0) + (y - y0 < 1 ? 0.18 * lit : 0), 0, 1), x, y);
+      if (hash(x, 5, 61) > 0.6) { const gl = 2 + ((hash(x, 6, 61) * 4) | 0), sw = Math.round(Math.sin(t * 2 + x * 0.3) * (o.wind || 0.5)); for (let j = 1; j <= gl; j++) px.set(x + (j > 2 ? sw : 0), y0 - j, px.ramp(HILL, 0.14 + 0.22 * lit + 0.02 * j, x, y0)); }
+    }
+    /* the hour of testing: the dark front, and the town kept under a dome of light */
+    if (storm > 0.01) {
+      const sx0 = sX(24), sy0 = sY(4), R = (24 + 96 * shield) * z;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const n = px.fbm(x * 0.018 + t * 0.14, y * 0.04 - t * 0.04, 3, 31), g = 1 - y / (H * 0.95);
+        let k = clamp(storm * 1.5 * (0.35 + g) + (n - 0.55) * storm * 1.6, 0, 1);
+        const dd = Math.hypot(x - sx0, (y - sy0) * 1.2), sm = sstep(R * 0.75, R, dd); k *= sm;
+        const f = Math.floor(k * 3 + thr(x, y)) / 3; if (f > 0) U[y * W + x] = mix(U[y * W + x], hex('#120912'), 0.8 * f);
+      }
+      for (let i = 0; i < 70; i++) {
+        const ex = ((hash(i, 1, 9) * W + t * (22 + 18 * hash(i, 3, 9))) % W + W) % W, ey = ((hash(i, 2, 9) * H + t * (30 + 25 * hash(i, 3, 9))) % H + H) % H;
+        if (Math.hypot(ex - sx0, (ey - sy0) * 1.2) < R) continue;
+        px.dpx(Math.round(ex), Math.round(ey), hex(hash(i, 4, 9) > 0.5 ? '#ff8a2a' : '#ffc060'), storm);
+      }
+      /* the edge of the shield, a thin bright arc */
+      if (shield > 0.05) for (let a2 = 0; a2 < 220; a2++) { const an = a2 / 220 * Math.PI, X = Math.round(sx0 + Math.cos(an) * R), Y = Math.round(sy0 - Math.sin(an) * R / 1.2); if (Y < sy0 && Math.sin(an * 24 + t * 2) > -0.2) px.dpx(X, Y, hex('#fff0c0'), 0.55 * shield); }
+    }
+    if (flash > 0.01) { const f = flash; for (let i = 0; i < W * H; i++) { const x = i % W, y = (i / W) | 0; if (f > thr(x, y)) U[i] = mix(U[i], hex('#fff6e0'), 0.5); } }
+    if (tepid > 0.01) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, c = U[i], l = (0.3 * (c & 255) + 0.59 * ((c >> 8) & 255) + 0.11 * ((c >> 16) & 255)) / 255; U[i] = mix(c, px.ramp(LUKE, clamp(l * 1.08, 0, 1), x, y), tepid); }
+    return { sX, sY, z, groundY: fgY, doorX: dsx, doorY: dsy };
+  };
 })();

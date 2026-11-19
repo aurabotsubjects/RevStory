@@ -815,7 +815,7 @@ All 10 original questions are answered (see Section 0). Still open (small): the 
 
 ## 12. MASTER EPISODE INDEX (FINAL NUMBERING: 102 EPISODES)
 
-> **Style and status:** every episode is pixel art. Eps 1–9 = pixel done (Eps 2–5 were rebuilt from 3D; Eps 6–9 are pixel-only). Eps 10–102 = not started; next is Ep 10 (Thyatira II, Rev 2:24–29). The *Data file* column below is the original 3D-era grouping; pixel episodes live in `px-###-###.js` files with the same 10-per-file grouping (Ep 1 currently sits alone in `px-001.js`).
+> **Style and status:** every episode is pixel art. Eps 1–15 = pixel done (Part I complete; Eps 2–5 were rebuilt from 3D; Eps 6–15 are pixel-only). Eps 16–102 = not started; next is Ep 16 (A Door Standing Open in Heaven, Part II). The *Data file* column below is the original 3D-era grouping; pixel episodes live in `px-###-###.js` files with the same 10-per-file grouping (Ep 1 currently sits alone in `px-001.js`).
 
 | Ep | Part | Verses | Title | Source outline | Data file |
 |---|---|---|---|---|---|
