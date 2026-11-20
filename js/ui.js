@@ -254,7 +254,7 @@
   $('#bFull').addEventListener('click', () => Player.fullscreen());
   $('#pBack').addEventListener('click', () => Player.close());
   $('#noglClose').addEventListener('click', () => { $('#nogl').classList.remove('show'); Player.close(); });
-  $('#bNext').addEventListener('click', () => { if (Aura.episodes[Player.n + 1]) Player.open(Player.n + 1); else Player.toast('The next episode is coming soon'); });
+  $('#bNext').addEventListener('click', () => { if (Aura.episodes[Player.n + 1]) Player.open(Player.n + 1); else Player.toast(Player.n >= 102 ? 'That was the final episode. Amen.' : 'The next episode is coming soon'); });
   $('#bPrev').addEventListener('click', () => { const e = Player.engine; if (e && e.time > 3) { e.seek(0); } else if (Player.n > 1 && Aura.episodes[Player.n - 1]) Player.open(Player.n - 1); else e.seek(0); });
   $('#ecNext').addEventListener('click', () => Player.open(Player.n + 1));
   $('#ecReplay').addEventListener('click', () => { clearInterval(Player.countdown); playerEl.classList.remove('ended'); Player.engine.seek(0); Player.engine.play(); });
