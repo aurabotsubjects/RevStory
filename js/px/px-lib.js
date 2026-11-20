@@ -1764,6 +1764,7 @@
   /* the shared title card: o: {t0, t1, y} */
   lib.titleCard = function (t, word, epNo, o) {
     o = o || {};
+    if (Aura.suppressTitle) return;
     const t0 = o.t0 === undefined ? 1.0 : o.t0, t1 = o.t1 === undefined ? 4.6 : o.t1;
     const k = sstep(t0, t0 + 1.0, t) * (1 - sstep(t1 - 0.8, t1, t));
     if (k <= 0.01) return;
@@ -1960,4 +1961,284 @@
     if (tepid > 0.01) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, c = U[i], l = (0.3 * (c & 255) + 0.59 * ((c >> 8) & 255) + 0.11 * ((c >> 16) & 255)) / 255; U[i] = mix(c, px.ramp(LUKE, clamp(l * 1.08, 0, 1), x, y), tepid); }
     return { sX, sY, z, groundY: fgY, doorX: dsx, doorY: dsy };
   };
+
+  /* ============================================================================
+   *  EPISODES 16-20 ADDITIONS · The throne room (Part II)
+   *  EMER / CRYS / WHITE ramps; sea (the sea of glass), rainbow (emerald), bigThrone (jasper and ruby),
+   *  elder (24 elders, white, crowned), creature (lion / ox / man / eagle, six eyed wings), scroll (seven seals),
+   *  lamb (slain, seven horns, seven eyes), host (a spiral of countless angels), harp, bowl, wings, miniCrown, handGlow
+   * ========================================================================== */
+  const EMER = hexes(['#02110c', '#05281a', '#0a4a2e', '#12784a', '#26b074', '#6ce8ae', '#c8ffe2']);
+  const CRYS = hexes(['#050914', '#0c1630', '#18305a', '#2f5c92', '#62a0c4', '#aee0ea', '#f2ffff']);
+  const WHITE = hexes(['#12142a', '#3a3f64', '#7a82aa', '#b8bfdc', '#e6eafa', '#ffffff']);
+  const RUBY = hexes(['#1c0508', '#4a0c14', '#8a1a22', '#c8322e', '#f06a48', '#ffb088']);
+  lib.EMER = EMER; lib.CRYS = CRYS; lib.WHITE = WHITE; lib.RUBY = RUBY;
+  lib.ell = (...a) => ell(...a);
+  const ell = (cx, cy, rx, ry, f) => { for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) { const dx = (x - cx) / rx, dy = (y - cy) / ry; if (dx * dx + dy * dy <= 1) f(x, y, dx, dy); } };
+
+  /* the sea of glass: o: {t, y0 (horizon row), cx (reflection centre), glow 0..1, ripple 0..1, k} fills y0..H */
+  lib.sea = function (o) {
+    const U = px.cur(), t = o.t, y0 = Math.round(o.y0), cx = o.cx === undefined ? 240 : o.cx, g = o.glow === undefined ? 0.6 : o.glow, rp = o.ripple || 0, k = o.k === undefined ? 1 : o.k;
+    for (let y = Math.max(0, y0); y < H; y++) {
+      const f = (y - y0) / Math.max(1, H - y0);
+      for (let x = 0; x < W; x++) {
+        const dx = (x - cx) / (120 + 260 * f);
+        let v = 0.1 + 0.16 * f + g * 0.5 * Math.exp(-dx * dx * 2) * (1 - 0.5 * f) + 0.04 * px.fbm(x * 0.03, y * 0.2 / (0.4 + f) + t * 0.05, 2, 12);
+        const ring = rp > 0 ? Math.sin(Math.hypot((x - cx) * 0.5, (y - y0) * 1.6) * 0.35 - t * 3) * 0.5 + 0.5 : 0;
+        v += rp * 0.12 * ring * Math.exp(-dx * dx * 0.7);
+        if (k < 1 && k <= px.thr(x, y)) continue;
+        U[y * W + x] = px.ramp(CRYS, clamp(v, 0, 1), x, y);
+      }
+    }
+    for (let i = 0; i < 26; i++) { const y = y0 + 4 + Math.floor(px.hash(i, 3, 41) * (H - y0 - 6)), x = Math.floor(px.hash(i, 4, 41) * W), w = 8 + Math.floor(px.hash(i, 5, 41) * 24), tw = 0.5 + 0.5 * Math.sin(t * 1.3 + i * 2); if (tw > 0.5 && k > 0.3) px.hline(x, x + w, y, hex('#d8f4fa')); }
+  };
+
+  /* the emerald rainbow: o: {cx, cy, rx, ry, k, t, th} an arc (the upper half) in emerald bands */
+  lib.rainbow = function (o) {
+    const k = o.k, t = o.t || 0, th = o.th || 7; if (k <= 0.01) return;
+    const bands = [hex('#1a6a4a'), hex('#26a870'), hex('#52e0a0'), hex('#8cf4c0'), hex('#4ac8d0'), hex('#5a8ae0'), hex('#a070d0')];
+    for (let b = 0; b < bands.length; b++) {
+      const wb = b < 4 ? th * 0.2 : th * 0.07;
+      for (let i = 0; i <= 420; i++) {
+        const a = Math.PI * (i / 420), ph = clamp(k * 1.4 - Math.abs(0.5 - i / 420) * 1.2 + 0.0, 0, 1); if (ph <= 0) continue;
+        const rr = 1 - b * 0.026, X = Math.round(o.cx + Math.cos(a) * o.rx * rr), Y = Math.round(o.cy - Math.sin(a) * o.ry * rr);
+        for (let j = 0; j < wb + 1; j++) px.dpx(X, Y + j, mix(bands[b], hex('#ffffff'), 0.15 * (0.5 + 0.5 * Math.sin(t * 2 + i * 0.05))), ph);
+      }
+    }
+    lib.halo(o.cx, o.cy - o.ry * 0.5, o.rx * 0.9, hex('#6cf0b0'), 0.14 * k, 0.55);
+  };
+
+  /* the great throne, jasper and ruby: o: {cx, by (base row), s, k, t, glow} about 100*s tall */
+  lib.bigThrone = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s || 1, cx = o.cx, by = o.by, t = o.t || 0, gl = o.glow === undefined ? 1 : o.glow; if (k <= 0.01) return;
+    lib.halo(cx, by - 70 * s, 130 * s, hex('#fff6d8'), 0.85 * k * gl, 0.95);
+    lib.halo(cx, by - 70 * s, 70 * s, hex('#ffffff'), 0.8 * k * gl, 1);
+    const R = (x0, y0, x1, y1, f, pal) => { for (let y = Math.round(y0); y <= Math.round(y1); y++) for (let x = Math.round(x0); x <= Math.round(x1); x++) if (k > px.thr(x, y)) px.set(x, y, px.ramp(pal || HONEY, clamp(f(x, y), 0, 1), x, y)); };
+    for (let y = Math.round(by - 112 * s); y <= Math.round(by - 36 * s); y++) for (let x = Math.round(cx - 46 * s); x <= Math.round(cx + 46 * s); x++) {
+      const dx = (x - cx) / s, cyArc = by / s - 64, dy = y / s - cyArc, r = Math.hypot(dx, Math.max(0, -dy)), inB = Math.abs(dx) <= 46 && (dy >= 0 || r <= 46);
+      if (!inB || k <= px.thr(x, y)) continue;
+      const inner = Math.abs(dx) < 35 && (dy >= -2 || Math.hypot(dx, dy) < 35);
+      px.set(x, y, px.ramp(inner ? RUBY : HONEY, clamp(inner ? 0.42 + 0.2 * (1 - (dy + 46) / 90) + 0.06 * Math.sin(t + x * 0.15 + y * 0.1) : 0.8 - 0.25 * dx / 46, 0, 1), x, y));
+    }
+    R(cx - 56 * s, by - 38 * s, cx + 56 * s, by - 26 * s, (x) => 0.8 - 0.15 * Math.abs(x - cx) / (56 * s));
+    R(cx - 62 * s, by - 50 * s, cx - 50 * s, by - 26 * s, () => 0.85); R(cx + 50 * s, by - 50 * s, cx + 62 * s, by - 26 * s, () => 0.7);
+    R(cx - 88 * s, by - 26 * s, cx + 88 * s, by - 14 * s, (x, y) => 0.62 + 0.2 * (1 - (y - (by - 26 * s)) / (12 * s)) - 0.1 * Math.abs(x - cx) / (88 * s));
+    R(cx - 108 * s, by - 14 * s, cx + 108 * s, by, (x, y) => 0.5 + 0.2 * (1 - (y - (by - 14 * s)) / (14 * s)) - 0.1 * Math.abs(x - cx) / (108 * s));
+    /* the One who sits: a brilliance like jasper and ruby, no form */
+    lib.halo(cx, by - 70 * s, 26 * s, hex('#ffffff'), 0.95 * k * gl, 1.3);
+    lib.halo(cx, by - 58 * s, 20 * s, hex('#ff9a70'), 0.5 * k * gl, 1.2);
+  };
+
+  /* an elder: white robe, gold crown. o: {x, y (feet), h, k, t, seed, kneel 0..1, glow} */
+  lib.elder = function (o) {
+    const k = o.k === undefined ? 1 : o.k, kn = o.kneel || 0, h = o.h * (1 - 0.3 * kn), x = o.x, y = o.y, t = o.t || 0, seed = o.seed || 0; if (k <= 0.01) return;
+    const top = y - h, hr = Math.max(1.5, h * 0.11);
+    for (let j = Math.ceil(h * 0.2); j <= h; j++) {
+      const u = j / h, yy = Math.round(top + j), w = h * (u < 0.3 ? 0.14 : 0.16 + 0.12 * (u - 0.3)), bow = kn * 0.35 * h * Math.max(0, 0.4 - u) * 2;
+      for (let xx = Math.round(x - w + bow); xx <= Math.round(x + w + bow); xx++) {
+        if (k <= px.thr(xx, yy)) continue; const f = (xx - (x - w)) / Math.max(1, 2 * w);
+        px.set(xx, yy, px.ramp(WHITE, clamp(0.45 + 0.4 * f + 0.06 * Math.sin(xx * 1.2 + u * 5 + seed), 0, 1), xx, yy));
+      }
+    }
+    const hx = Math.round(x + kn * h * 0.3), hy = Math.round(top + h * 0.1 + kn * 2);
+    ell(hx, hy, hr, hr, (X, Y, dx) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(WHITE, dx > 0 ? 0.9 : 0.55, X, Y)); });
+    const cw = Math.max(2, Math.round(hr * 1.3));
+    for (let i = -cw; i <= cw; i++) { const X = hx + i, Y = hy - Math.round(hr) - 1; if (k > px.thr(X, Y)) { px.set(X, Y, hex('#ffd070')); if (i % 2 === 0) px.set(X, Y - 1, hex('#fff0a0')); } }
+    if (o.glow) lib.halo(hx, hy, h * 0.8, hex('#ffe9b0'), 0.2 * k * o.glow, 1);
+  };
+
+  /* wings of light: o: {x, y, s, k, t, spread 0..1, eyes 0..1, n (feather rows per side)} */
+  lib.wings = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s, t = o.t || 0, sp = o.spread === undefined ? 0.7 : o.spread, n = o.n || 3; if (k <= 0.01) return;
+    for (const side of [-1, 1]) for (let r = 0; r < n; r++) {
+      const base = (r - (n - 1) / 2) * -1.0, len = (28 - Math.abs(r - (n - 1) / 2) * 3) * s, flap = Math.sin(t * 2.2 + r * 0.7 + (side > 0 ? 0.4 : 0)) * 0.12;
+      const ang = -0.1 + base * 0.5 * sp - flap + (1 - sp) * 1.1;
+      for (let d = 2; d < len; d++) {
+        const w = Math.sin(d / len * 3.0) * 4.2 * s, X = o.x + side * Math.cos(ang) * d, Y = o.y - Math.sin(ang) * d + (r - (n - 1) / 2) * 2 * s;
+        for (let q = -w; q <= w; q += 1) { const XX = Math.round(X), YY = Math.round(Y + q * 0.9); if (k * 1.1 > px.thr(XX, YY)) px.set(XX, YY, px.ramp(WHITE, clamp(0.55 + 0.35 * (1 - d / len) + 0.1 * (q / Math.max(1, w)), 0, 1), XX, YY)); }
+        if ((o.eyes || 0) > 0 && d > 5 && d % Math.max(4, Math.round(7 * s)) === 0) { const XX = Math.round(X), YY = Math.round(Y); if (o.eyes > px.thr(XX, YY)) { px.set(XX, YY, hex('#1a1230')); px.set(XX + 1, YY, hex(Math.sin(t * 2 + d + r) > 0.92 ? '#1a1230' : '#ffd070')); } }
+      }
+    }
+  };
+
+  /* a living creature: o: {kind: 'lion'|'ox'|'man'|'eagle', x, y (centre), s, k, t, eyes 0..1, wing 0..1} about 40*s tall */
+  lib.creature = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s || 1, x = o.x, y = o.y, t = o.t || 0; if (k <= 0.01) return;
+    lib.halo(x, y, 46 * s, hex('#ffd890'), 0.3 * k, 0.9);
+    lib.wings({ x, y: y - 4 * s, s: s * 1.3, k, t, spread: o.wing === undefined ? 0.8 : o.wing, eyes: o.eyes === undefined ? 0.9 : o.eyes, n: 3 });
+    for (const lx of (o.kind === 'lion' || o.kind === 'ox') ? [-8, -3, 3, 8] : [-4, 4]) for (let q = 10; q < 24; q++) { const X = Math.round(x + lx * s), Y = Math.round(y + q * s * 0.8); if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(HONEY, 0.45 + 0.1 * (lx > 0 ? 1 : 0), X, Y)); if (k > px.thr(X + 1, Y)) px.set(X + 1, Y, px.ramp(HONEY, 0.35, X + 1, Y)); }
+    ell(x, y + 4 * s, 11 * s, 11 * s, (X, Y, dx, dy) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(HONEY, clamp(0.55 + 0.3 * dx - 0.15 * dy, 0, 1), X, Y)); });
+    const hy = y - 12 * s, e = (X, Y) => { if ((o.eyes === undefined ? 0.9 : o.eyes) > px.thr(X, Y)) { px.set(X, Y, hex('#241408')); px.set(X + 1, Y, hex(Math.sin(t * 2.4 + X * 3 + Y) > 0.9 ? '#241408' : '#fff0b0')); } };
+    for (let i = 0; i < 7; i++) e(Math.round(x - 7 * s + (i % 3) * 7 * s), Math.round(y + (i < 3 ? -2 : i < 6 ? 8 : 14) * s)); 
+    const kd = o.kind;
+    if (kd === 'lion') { ell(x, hy, 11 * s, 11 * s, (X, Y, dx) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(HONEY, clamp(0.3 + 0.2 * dx + 0.1 * Math.sin(X * 2 + Y * 2), 0, 1), X, Y)); }); ell(x, hy + 1 * s, 6 * s, 6.5 * s, (X, Y, dx) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(HONEY, clamp(0.78 + 0.1 * dx, 0, 1), X, Y)); }); e(Math.round(x - 3 * s), Math.round(hy - 1 * s)); e(Math.round(x + 2 * s), Math.round(hy - 1 * s)); }
+    else if (kd === 'ox') { ell(x, hy, 7 * s, 7 * s, (X, Y, dx) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(HONEY, clamp(0.5 + 0.25 * dx, 0, 1), X, Y)); }); for (const sd of [-1, 1]) for (let q = 0; q < 10 * s; q++) { const X = Math.round(x + sd * (6 * s + q * 0.7)), Y = Math.round(hy - 4 * s - q * 0.8 + q * q * 0.04); if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(WHITE, 0.8, X, Y)); } e(Math.round(x - 3 * s), Math.round(hy)); e(Math.round(x + 2 * s), Math.round(hy)); }
+    else if (kd === 'man') { ell(x, hy, 6 * s, 7 * s, (X, Y, dx) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(HONEY, clamp(0.7 + 0.2 * dx, 0, 1), X, Y)); }); lib.halo(x, hy, 12 * s, hex('#fff6d0'), 0.3 * k, 1); }
+    else { ell(x, hy, 6 * s, 6 * s, (X, Y, dx) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(WHITE, clamp(0.6 + 0.3 * dx, 0, 1), X, Y)); }); for (let q = 0; q < 6 * s; q++) { const X = Math.round(x + 5 * s + q), Y = Math.round(hy + q * 0.5 - 1); if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(HONEY, 0.8 - q * 0.05, X, Y)); } e(Math.round(x + 1 * s), Math.round(hy - 1 * s)); }
+  };
+
+  /* the scroll with seven seals: o: {x, y (centre), w, h, k, t, broken 0..7 (how many seals are gone), glow, hold 0..1 (a hand's glow behind)} */
+  lib.scroll = function (o) {
+    const k = o.k === undefined ? 1 : o.k, w = o.w, h = o.h, x0 = o.x - w / 2, y0 = o.y - h / 2, t = o.t || 0, br = o.broken || 0; if (k <= 0.01) return;
+    lib.halo(o.x, o.y, w * 0.9, hex('#ffd890'), 0.5 * k * (o.glow === undefined ? 1 : o.glow), 0.7);
+    for (let y = Math.round(y0); y <= Math.round(y0 + h); y++) for (let x = Math.round(x0); x <= Math.round(x0 + w); x++) {
+      if (k <= px.thr(x, y)) continue; const u = (x - x0) / w, v = (y - y0) / h;
+      let c = 0.78 + 0.1 * Math.sin(u * 3.2) + 0.04 * px.hash(x >> 1, y >> 1, 9) - 0.1 * Math.abs(v - 0.5);
+      if (Math.abs(v - 0.5) > 0.12 && Math.abs(v - 0.5) < 0.46 && ((y - Math.round(y0)) % 4 === 0) && u > 0.06 && u < 0.94) c -= 0.22;    /* lines of writing */
+      px.set(x, y, px.ramp(HONEY, clamp(c, 0, 1), x, y));
+    }
+    for (const sd of [0, 1]) { const cx = Math.round(sd ? x0 + w : x0); for (let y = Math.round(y0 - 3); y <= Math.round(y0 + h + 3); y++) for (let dx = -3; dx <= 3; dx++) if (k > px.thr(cx + dx, y)) px.set(cx + dx, y, px.ramp(HONEY, clamp(0.5 + 0.12 * dx, 0, 1), cx + dx, y)); }
+    /* seven seals along the lower edge */
+    for (let i = 0; i < 7; i++) {
+      const sx = x0 + 10 + i * (w - 20) / 6, sy = y0 + h + 1, gone = clamp(br - i, 0, 1); if (gone >= 1) continue;
+      const fall = gone * 18, a = (1 - gone) * k, r = Math.max(2, Math.round(h * 0.09));
+      ell(sx, sy + fall, r, r, (X, Y, dx, dy) => { if (a > px.thr(X, Y)) px.set(X, Y, px.ramp(RUBY, clamp(0.55 + 0.25 * (-dx - dy) * 0.5 + 0.1 * Math.sin(t * 2 + i), 0, 1), X, Y)); });
+      if (a > 0.3) lib.halo(sx, sy + fall, r * 2.4, hex('#ffb060'), 0.35 * a, 1);
+    }
+  };
+
+  /* the Lamb that was slain: o: {x, y (feet), s, k, t, glow, horns 0..1, eyes 0..1} about 30*s tall */
+  lib.lamb = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s || 1, x = o.x, y = o.y, t = o.t || 0, gl = o.glow === undefined ? 1 : o.glow; if (k <= 0.01) return;
+    lib.halo(x, y - 14 * s, 44 * s, hex('#fff0c8'), 0.55 * k * gl, 1);
+    for (const lx of [-8, -3, 4, 9]) for (let q = 0; q < 6 * s; q++) { const X = Math.round(x + lx * s), Y = Math.round(y - q); if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(WHITE, 0.4 + 0.1 * (lx > 0 ? 1 : 0), X, Y)); }
+    ell(x, y - 11 * s, 13 * s, 8 * s, (X, Y, dx, dy) => { if (k > px.thr(X, Y)) { const wool = 0.7 + 0.18 * Math.sin(X * 1.3 + Y * 1.7) * Math.sin(X * 0.7 - Y); px.set(X, Y, px.ramp(WHITE, clamp(wool - 0.2 * dy + 0.1 * dx, 0, 1), X, Y)); } });
+    const hx = x + 13 * s, hy = y - 17 * s;
+    ell(hx, hy, 5 * s, 5.5 * s, (X, Y, dx) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(WHITE, clamp(0.72 + 0.15 * dx, 0, 1), X, Y)); });
+    ell(hx + 4 * s, hy + 2 * s, 3 * s, 2.4 * s, (X, Y) => { if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(WHITE, 0.55, X, Y)); });
+    for (let i = 0; i < 7; i++) { const a = (-1.2 + i * 0.4) * (o.horns === undefined ? 1 : o.horns), X = Math.round(hx - 1 * s + Math.sin(a) * 6 * s), Y = Math.round(hy - 5 * s - Math.cos(a) * 3 * s); if (k * (o.horns === undefined ? 1 : o.horns) > px.thr(X, Y)) { px.set(X, Y, hex('#ffd070')); px.set(X, Y - 1, hex('#fff0a0')); px.set(X + Math.round(Math.sin(a)), Y - 2, hex('#ffe9a0')); } }
+    for (let i = 0; i < 7; i++) { const a = (-1.2 + i * 0.4), X = Math.round(hx + 1 * s + Math.sin(a) * 4.2 * s), Y = Math.round(hy - 1.5 * s - Math.cos(a) * 1.5 * s + 3); const E = o.eyes === undefined ? 1 : o.eyes; if (E > px.thr(X, Y)) { px.set(X, Y, hex('#fff6d0')); if (Math.sin(t * 3 + i) > 0.6) lib.halo(X, Y, 3, hex('#ffd070'), 0.6 * E, 1); } }
+    for (let i = 0; i < 5; i++) { const X = Math.round(x + 8 * s + i * 0.4), Y = Math.round(y - 13 * s + i); if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(RUBY, 0.55 + 0.05 * i, X, Y)); }     /* the wound, slight and quiet */
+  };
+
+  /* a host of angels as a particle spiral: o: {cx, cy, k, t, arms, spin, r0, r1, n, tilt} */
+  lib.host = function (o) {
+    const k = o.k; if (k <= 0.01) return;
+    const n = o.n || 600, arms = o.arms || 5, t = o.t, r0 = o.r0 || 6, r1 = o.r1 || 230, tilt = o.tilt === undefined ? 0.42 : o.tilt, c1 = hex('#fffbe8'), c2 = hex('#ffe58a'), c3 = hex('#ffbc50'), c4 = hex('#a8d8ff');
+    for (let i = 0; i < n; i++) {
+      const u = Math.pow(px.hash(i, 1, 63), 0.7), arm = i % arms, r = r0 + u * (r1 - r0), a = arm / arms * 6.2832 + u * 5.2 + (o.spin || 0) * t * (0.6 + 0.8 * (1 - u)) + px.hash(i, 2, 63) * 0.25;
+      const X = Math.round(o.cx + Math.cos(a) * r), Y = Math.round(o.cy + Math.sin(a) * r * tilt), tw = 0.55 + 0.45 * Math.sin(t * 2 + i), al = k * tw * (1 - 0.4 * u);
+      if (al < px.thr(X, Y)) continue; const q = px.hash(i, 3, 63);
+      px.set(X, Y, q > 0.8 ? c1 : q > 0.45 ? c2 : q > 0.15 ? c3 : c4); if (q > 0.93) px.set(X + 1, Y, c2);
+    }
+  };
+
+  /* a harp: o: {x, y, s, k} */
+  lib.harp = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s || 1, x = o.x, y = o.y; if (k <= 0.01) return;
+    for (let q = 0; q <= 12 * s; q++) { const X = Math.round(x + Math.sin(q / (12 * s) * 2.4) * 3 * s), Y = Math.round(y - q); if (k > px.thr(X, Y)) px.set(X, Y, hex('#ffd070')); if (q % 2 === 0 && k > px.thr(X + 1, Y)) px.set(X + 1, Y, hex('#b8802a')); }
+    for (let q = 0; q <= 8 * s; q++) { const X = Math.round(x + q * 0.9), Y = Math.round(y - 12 * s + q * 0.2); if (k > px.thr(X, Y)) px.set(X, Y, hex('#e8b04a')); }
+    for (let i = 1; i <= 4; i++) px.vline(Math.round(x + i * 1.8 * s), Math.round(y - 11 * s + i * 0.3), Math.round(y - 1), mix(hex('#fff0c0'), hex('#8a5a20'), 0.2 + (1 - k) * 0.7));
+  };
+
+  /* a golden bowl of incense: o: {x, y, s, k, t, smoke 0..1} */
+  lib.bowl = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s || 1, t = o.t || 0; if (k <= 0.01) return;
+    ell(o.x, o.y, 5 * s, 3 * s, (X, Y, dx, dy) => { if (dy > -0.1 && k > px.thr(X, Y)) px.set(X, Y, px.ramp(HONEY, clamp(0.62 - 0.2 * dy + 0.2 * dx, 0, 1), X, Y)); });
+    px.hline(Math.round(o.x - 5 * s), Math.round(o.x + 5 * s), Math.round(o.y), hex('#ffe9a0'));
+    const sm = o.smoke === undefined ? 1 : o.smoke;
+    for (let i = 0; i < 18; i++) { const u = (i / 18 + t * 0.12) % 1, X = Math.round(o.x + Math.sin(u * 7 + i) * (2 + u * 6) * s), Y = Math.round(o.y - 2 - u * 26 * s); const a = k * sm * (1 - u) * 0.8; if (a > px.thr(X, Y)) px.set(X, Y, mix(hex('#fff0d0'), hex('#b8a8d0'), u)); }
+  };
+
+  /* a small crown, flying or resting: o: {x, y, s, k, rot} */
+  lib.miniCrown = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s || 1; if (k <= 0.01) return;
+    const c = Math.cos(o.rot || 0), sn = Math.sin(o.rot || 0);
+    for (let i = -4; i <= 4; i++) for (let j = 0; j <= 3; j++) { const lx = i * s, ly = -j * s * 0.8, X = Math.round(o.x + lx * c - ly * sn), Y = Math.round(o.y + lx * sn + ly * c); if (k > px.thr(X, Y)) px.set(X, Y, j === 0 ? hex('#ffd070') : (i % 2 === 0 ? hex('#fff0a0') : (j > 2 ? hex('#000000') : hex('#e8b04a')))); }
+    for (let i = -4; i <= 4; i += 2) { const X = Math.round(o.x + i * s * c + 3 * s * sn), Y = Math.round(o.y + i * s * sn - 3.2 * s * c); if (k > px.thr(X, Y)) px.set(X, Y, hex('#ffffff')); }
+    lib.halo(Math.round(o.x), Math.round(o.y), 7 * s, hex('#fff0c0'), 0.4 * k, 1);
+  };
+
+
+  /* ============================================================================
+   *  EPISODES 21-30 ADDITIONS · Part III, the seven seals
+   *  skyGrad, land (hills), horse (+rider: bow / sword / scales / death), person, palm, altar2, line
+   * ========================================================================== */
+  const BLACKH = hexes(['#020204', '#08080e', '#12121c', '#20202c', '#32323f', '#4a4a58', '#6a6a7c']);
+  const PALEH = hexes(['#16201a', '#2c3a30', '#4c6450', '#7a9a7c', '#a8c4a4', '#d0e0c4', '#eef4e0']);
+  const REDH = hexes(['#1c0404', '#4a0a08', '#8a1810', '#c82c18', '#f0502a', '#ff8a50', '#ffc080']);
+  const WARMW = hexes(['#3a3226', '#7a6c52', '#bcae8c', '#e6dac0', '#fff4d8', '#ffffff']);
+  lib.BLACKH = BLACKH; lib.PALEH = PALEH; lib.REDH = REDH;
+  const pline = (x0, y0, x1, y1, col, th, a) => { const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)))); for (let i = 0; i <= n; i++) { const X = Math.round(lerp(x0, x1, i / n)), Y = Math.round(lerp(y0, y1, i / n)); for (let q = 0; q < (th || 1); q++) { if (a === undefined) px.set(X, Y + q, col); else px.dpx(X, Y + q, col, a); } } };
+  lib.line = pline;
+
+  /* a sky: o: {t, top, mid, bot (hex), k, cloud 0..1, wind, stars 0..1, dark 0..1, y1} fills rows 0..y1 */
+  lib.skyGrad = function (o) {
+    const U = px.cur(), t = o.t || 0, a = hex(o.top), b = hex(o.mid), c = hex(o.bot), y1 = o.y1 || H, cl = o.cloud === undefined ? 0.4 : o.cloud, dk = o.dark || 0, cc = hex(o.cloudCol || '#ffffff');
+    for (let y = 0; y < y1; y++) {
+      const f = y / y1, base = f < 0.55 ? mix(a, b, f / 0.55) : mix(b, c, (f - 0.55) / 0.45);
+      for (let x = 0; x < W; x++) {
+        let col = base;
+        if (cl > 0) { const n = px.fbm(x * 0.012 - t * (o.wind || 0.02), y * 0.045, 3, 17); const m = clamp((n - 0.5) * 2.2, 0, 1) * cl; if (m > 0.02) col = mix(col, cc, m * 0.55); }
+        if (dk > 0) col = mix(col, hex('#000000'), dk);
+        U[y * W + x] = col;
+      }
+    }
+    if ((o.stars || 0) > 0) for (let i = 0; i < 120; i++) { const x = Math.floor(px.hash(i, 1, 81) * W), y = Math.floor(px.hash(i, 2, 81) * y1 * 0.8), tw = 0.5 + 0.5 * Math.sin(t * 1.6 + i); if (o.stars * tw > px.thr(x, y)) px.set(x, y, hex(i % 4 ? '#c8d0f0' : '#ffffff')); }
+  };
+
+  /* hills: o: {y0, amp, c1, c2 (hex), seed, scroll, k, freq} filled to the bottom */
+  lib.land = function (o) {
+    const k = o.k === undefined ? 1 : o.k, c1 = hex(o.c1), c2 = hex(o.c2), fr = o.freq || 0.012; if (k <= 0.01) return;
+    for (let x = 0; x < W; x++) {
+      const h = Math.round(o.y0 + o.amp * (px.fbm(x * fr + (o.scroll || 0), o.seed || 3, 3, 29) - 0.5) * 2);
+      for (let y = Math.max(0, h); y < H; y++) { if (k <= px.thr(x, y)) continue; const d = clamp((y - h) / Math.max(10, H - h), 0, 1); let col = mix(c1, c2, d); if ((x + y) % 7 === 0 && d < 0.6) col = mix(col, c1, 0.4); px.set(x, y, col); }
+    }
+  };
+
+  /* a tiny person (no face): o: {x, y (feet), h, k, col (hex), arms 0..1 raised, kneel 0..1} */
+  lib.person = function (o) {
+    const k = o.k === undefined ? 1 : o.k, h = o.h * (1 - 0.3 * (o.kneel || 0)), col = hex(o.col || '#0a0810'); if (k <= 0.01) return;
+    const hr = Math.max(1, Math.round(h * 0.13)), x = o.x, top = o.y - h;
+    for (let j = Math.round(h * 0.22); j <= h; j++) { const w = Math.max(0.5, h * (j < h * 0.4 ? 0.13 : 0.13 + 0.1 * (j / h - 0.4))); for (let xx = Math.round(x - w); xx <= Math.round(x + w); xx++) { const yy = Math.round(top + j); if (k > px.thr(xx, yy)) px.set(xx, yy, col); } }
+    for (let yy = -hr; yy <= hr; yy++) for (let xx = -hr; xx <= hr; xx++) if (xx * xx + yy * yy <= hr * hr + 1) { const X = Math.round(x + xx), Y = Math.round(top + hr + yy); if (k > px.thr(X, Y)) px.set(X, Y, col); }
+    if (o.arms) { const a = o.arms; pline(x - 1, top + h * 0.3, x - 3 - a * 2, top + h * 0.3 - a * h * 0.4, col, 1); pline(x + 1, top + h * 0.3, x + 3 + a * 2, top + h * 0.3 - a * h * 0.4, col, 1); }
+  };
+
+  /* a palm branch: o: {x, y, s, k, t} */
+  lib.palm = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s || 1, t = o.t || 0; if (k <= 0.01) return;
+    pline(o.x, o.y, o.x + Math.sin(t * 2 + o.x) * s, o.y - 9 * s, hex('#7a5a2a'), 1);
+    for (let i = -3; i <= 3; i++) { const a = i * 0.32 + Math.sin(t * 2 + o.x * 0.3) * 0.08, ex = o.x + Math.sin(a) * 9 * s, ey = o.y - 9 * s - Math.cos(a) * 7 * s + Math.abs(i) * 1.2 * s; if (k > px.thr(Math.round(ex), Math.round(ey))) pline(o.x, o.y - 9 * s, ex, ey, hex(Math.abs(i) % 2 ? '#58b860' : '#3a9048'), 1, k); }
+  };
+
+  /* a golden altar with four horns: o: {cx, by, w, h, k, t, glow, fire 0..1} */
+  lib.altar2 = function (o) {
+    const k = o.k === undefined ? 1 : o.k, w = o.w, h = o.h, x0 = Math.round(o.cx - w / 2), t = o.t || 0; if (k <= 0.01) return;
+    lib.halo(o.cx, o.by - h, w * 0.9, hex('#ffd890'), 0.5 * k * (o.glow === undefined ? 1 : o.glow), 0.8);
+    for (let y = o.by - h; y <= o.by; y++) for (let x = x0; x <= x0 + w; x++) { if (k <= px.thr(x, y)) continue; const f = (x - x0) / w; px.set(x, y, px.ramp(HONEY, clamp(0.5 + 0.28 * (1 - f) - 0.12 * (y - (o.by - h)) / h + 0.04 * Math.sin(y * 1.3), 0, 1), x, y)); }
+    for (const sx of [0, 1]) for (const hx of [0, 1]) { const X = x0 + (sx ? w - 2 : 0) + hx; for (let q = 0; q < 6; q++) if (k > px.thr(X, o.by - h - q)) px.set(X, o.by - h - q, px.ramp(HONEY, 0.7 + q * 0.05, X, o.by - h - q)); }
+    const fi = o.fire === undefined ? 0 : o.fire; if (fi > 0.01) lib.flame({ x: o.cx, y: o.by - h, k: fi, pop: 0, t, seed: 77, s: w / 24, glow: 1 });
+  };
+
+  /* a horse in profile, galloping right, with a rider: o: {x, y (ground), s, k, t, coat 'white'|'red'|'black'|'pale', speed, rider 'bow'|'sword'|'scales'|'death'|null, glow, sword 0..1} about 36*s tall */
+  lib.horse = function (o) {
+    const k = o.k === undefined ? 1 : o.k, s = o.s || 1, t = o.t || 0, sp = o.speed === undefined ? 1 : o.speed; if (k <= 0.01) return;
+    const PAL = { white: WARMW, red: REDH, black: BLACKH, pale: PALEH }[o.coat || 'white'], ph = t * 6.2832 * 1.6 * sp, bob = Math.sin(ph * 2) * 1.2 * s * (sp > 0 ? 1 : 0);
+    const gc = { white: '#fff6d0', red: '#ff7040', black: '#807890', pale: '#9cd08a' }[o.coat || 'white'];
+    if (o.glow) lib.halo(o.x, o.y - 24 * s, 44 * s, hex(gc), 0.4 * k * o.glow, 1);
+    const P = (X, Y, f) => { X = Math.round(X); Y = Math.round(Y); if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(PAL, clamp(f, 0, 1), X, Y)); };
+    const E = (cx, cy, rx, ry, f0, fs) => ell(cx, cy, rx, ry, (X, Y, dx, dy) => P(X, Y, f0 - fs * dy + 0.05 * dx));
+    /* tail and legs behind first */
+    for (let i = 0; i < 16; i++) { const u = i / 15, X = o.x - 13 * s - u * 12 * s, Y = o.y - 22 * s + bob + u * 8 * s + Math.sin(ph + u * 3) * 2 * s * u; P(X, Y, 0.3 + 0.1 * u); P(X, Y + 1, 0.25); }
+    const legs = [[-9, 0], [-6, 0.5], [6, 0.25], [9, 0.75]];
+    for (const [lx, off] of legs) { const a = ph + off * 6.2832, fx = o.x + lx * s + Math.sin(a) * 12 * s, fy = o.y - Math.max(0, Math.cos(a)) * 5 * s * sp - 0.5; const kx = o.x + lx * s + Math.sin(a) * 6 * s, ky = o.y - 8 * s; pline(o.x + lx * s, o.y - 16 * s + bob, kx, ky, PAL[3], Math.max(2, Math.round(1.6 * s))); pline(kx, ky, fx, fy, PAL[2], Math.max(2, Math.round(1.3 * s))); P(fx, fy, 0.2); P(fx + 1, fy, 0.2); }
+    E(o.x, o.y - 20 * s + bob, 15 * s, 6 * s, 0.62, 0.3); E(o.x + 9 * s, o.y - 21 * s + bob, 7 * s, 6.5 * s, 0.64, 0.3);
+    for (let i = 0; i < 8; i++) { const u = i / 7; E(o.x + 11 * s + u * 8 * s, o.y - 24 * s + bob - u * 8 * s, 5 * s - u * 1.5 * s, 5 * s - u * 1.2 * s, 0.6, 0.2); }
+    E(o.x + 22 * s, o.y - 33 * s + bob, 6 * s, 3.4 * s, 0.62, 0.2); E(o.x + 27 * s, o.y - 31 * s + bob, 3.6 * s, 2.6 * s, 0.5, 0.2);
+    P(o.x + 21 * s, o.y - 37 * s + bob, 0.5); P(o.x + 21 * s, o.y - 38 * s + bob, 0.45);
+    for (let i = 0; i < 9; i++) { const u = i / 8; P(o.x + 10 * s + u * 11 * s - 1, o.y - 25 * s + bob - u * 9 * s - 2, 0.15 + 0.1 * Math.sin(ph + i)); P(o.x + 10 * s + u * 11 * s - 2, o.y - 24 * s + bob - u * 9 * s - 2, 0.12); }
+    /* rider */
+    const R = o.rider; if (!R) return; const rx = o.x + 1 * s, ry = o.y - 26 * s + bob, RC = R === 'death' ? PALEH : R === 'scales' ? BLACKH : R === 'sword' ? REDH : WHITE;
+    const rp = (X, Y, f) => { X = Math.round(X); Y = Math.round(Y); if (k > px.thr(X, Y)) px.set(X, Y, px.ramp(RC, clamp(f, 0, 1), X, Y)); };
+    const th = R === 'death' ? 15 : 11;
+    for (let j = 0; j < th * s; j++) { const w = (R === 'death' ? 2.8 : 2.2) * s * (1 - j / (th * s) * 0.2) + (j > th * s * 0.7 ? 1.5 * s : 0); for (let xx = -w; xx <= w; xx++) rp(rx + xx - j * 0.15, ry - j, R === 'death' ? 0.25 + 0.08 * xx : 0.55 + 0.1 * xx / w); }
+    const hy = ry - th * s - 2 * s, hr = R === 'death' ? 3.4 * s : 2.4 * s;
+    ell(rx - th * s * 0.15, hy, hr, hr, (X, Y, dx, dy) => rp(X, Y, R === 'death' ? 0.1 : 0.78 + 0.1 * dx));
+    if (R === 'death') for (let q = 0; q < 6 * s; q++) rp(rx - th * s * 0.15 + q * 0.3, hy - hr - q * 0.7, 0.18);
+    if (R === 'bow') { for (let q = -8; q <= 8; q++) rp(rx + 8 * s + (1 - (q / 8) * (q / 8)) * 3 * s, ry - 8 * s + q * s * 0.9, 0.9); pline(rx + 8 * s, ry - 8 * s - 7 * s, rx + 8 * s, ry - 8 * s + 7 * s, hex('#e8dcb0'), 1, k * 0.8); lib.miniCrown({ x: rx - th * s * 0.15, y: hy - hr - 1, s: 0.8 * s, k, rot: 0 }); }
+    if (R === 'sword') { const fl = o.sword === undefined ? 1 : o.sword; pline(rx + 3 * s, ry - 9 * s, rx + 3 * s + 14 * s, ry - 9 * s - 10 * s, hex('#e8e8f4'), 1); pline(rx + 3 * s, ry - 8 * s, rx + 3 * s + 14 * s, ry - 8 * s - 10 * s, hex('#9aa0b8'), 1); lib.halo(rx + 12 * s, ry - 16 * s, 12 * s * fl, hex('#ffe8c0'), 0.7 * k * fl * (0.5 + 0.5 * Math.sin(t * 8)), 1); }
+    if (R === 'scales') { const bx = rx + 8 * s, by = ry - 14 * s, sw = Math.sin(t * 2.4) * 0.15; pline(bx - 7 * s, by - sw * 7 * s, bx + 7 * s, by + sw * 7 * s, hex('#c8a85a'), 1); pline(bx, by - 4 * s, bx, by + 5 * s, hex('#c8a85a'), 1); for (const sd of [-1, 1]) { const px0 = bx + sd * 7 * s, py0 = by + sd * sw * 7 * s; pline(px0, py0, px0 - 3 * s, py0 + 6 * s, hex('#a88a40'), 1); pline(px0, py0, px0 + 3 * s, py0 + 6 * s, hex('#a88a40'), 1); pline(px0 - 3.5 * s, py0 + 6 * s, px0 + 3.5 * s, py0 + 6 * s, hex('#e0c070'), 1); } }
+  };
+
 })();

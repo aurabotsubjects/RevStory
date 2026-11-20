@@ -81,9 +81,9 @@
     seek(t) { t = clamp(t, 0, this.duration); this._t = t; if (this.playing) { this._t0 = t; this._c0 = this.ctx.currentTime; hook.stop(); hook.start(this.ctx, null, t, this.ctx.currentTime + 0.08); } onTime(t); }
   }
   function applyScoreGain() {
-    const T = st.T; if (!T || T.kind !== 'engine' || !T.e.master) return;
+    const T = st.T; if (!T || T.kind !== 'engine' || !T.e.musicGain) return;
     const muteScore = st.recording && !LS.get('hearScore', false);
-    T.e.master.gain.value = muteScore ? 0 : T.e.volume;
+    T.e.musicGain.gain.value = muteScore ? 0 : (T.e.mix ? T.e.mix.music : 1);
   }
 
   /* ================================================================ processing / caches */

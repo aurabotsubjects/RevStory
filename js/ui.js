@@ -82,7 +82,7 @@
 
   /* --------------------------------------------------------- menu */
   const menuNav = $('#menuNav');
-  const menuItems = [['01', 'Watch', () => watchNow()], ['02', 'Episodes', () => goto('#episodes')], ['03', 'The Series', () => goto('#about')], ['04', 'Aurabot', () => goto('#studio')], ['05', 'Settings', () => (Aura.Studio ? Aura.Studio.open() : Player.toast('Settings are still loading'))]];
+  const menuItems = [['01', 'Watch', () => watchNow()], ['02', 'Episodes', () => goto('#episodes')], ['03', 'The Series', () => goto('#about')], ['04', 'Aurabot', () => goto('#studio')], ['05', 'Settings', () => (Aura.Studio ? Aura.Studio.open() : Player.toast('Settings are still loading'))], ['06', 'Devotional', () => { location.href = 'devotional/index.html'; }]];
   menuItems.forEach(([n, label, fn], k) => {
     const a = document.createElement('a'); a.className = 'menu-item'; a.href = '#';
     a.innerHTML = '<span class="no">' + n + '</span><span class="word"></span>';
@@ -138,6 +138,7 @@
   const playerEl = $('#player'), stageEl = $('#stage');
   const Player = {
     engine: null, n: 0, idleT: 0, qMode: 0, countdown: 0,
+    autoNext: (() => { try { return localStorage.getItem('aura.autonext') !== '0'; } catch (e) { return true; } })(),
     toast(msg) { const t = $('#toast'); if (!playerEl.classList.contains('open')) { const g = document.createElement('div'); g.className = 'toast show'; g.style.position = 'fixed'; g.style.zIndex = 200; g.textContent = msg; document.body.appendChild(g); setTimeout(() => g.remove(), 2200); return; } t.textContent = msg; t.classList.add('show'); clearTimeout(this._tt); this._tt = setTimeout(() => t.classList.remove('show'), 2400); },
     /* one engine at a time: WebGL (3D episodes) or the 2D pixel engine; switch when the style changes */
     ensureEngine(def) {
@@ -150,8 +151,11 @@
       }
       return this.engine;
     },
-    async open(n) {
+    async open(n, auto) {
       const def = Aura.episodes[n], meta = S.episodes[n - 1];
+      if (!auto) this.pl = null;
+      /* back-to-back auto-play: skip the episode title card, except when a new Part begins */
+      Aura.suppressTitle = !!(auto && meta && S.episodes[n - 2] && meta.part === S.episodes[n - 2].part);
       if (!def) { this.toast('Episode ' + n + ' is coming soon'); return; }
       clearInterval(this.countdown);
       this.n = n; localStorage.setItem('aura.last', n);
@@ -172,6 +176,7 @@
     /* used by the Voice Studio: create the engine and load an episode WITHOUT showing or starting the player */
     async loadOnly(n) {
       const def = Aura.episodes[n], meta = S.episodes[n - 1];
+      if (!auto) this.pl = null;
       if (!def || (!def.pixel && !Aura.Engine.supported())) return null;
       this.ensureEngine(def);
       this.n = n;
@@ -180,6 +185,7 @@
     },
     stageEl, playerEl,
     close() {
+      { const mp = document.getElementById('mixPanel'), mb = document.getElementById('bMix'); if (mp) mp.hidden = true; if (mb) { mb.classList.remove('on'); mb.setAttribute('aria-expanded', 'false'); } }
       clearInterval(this.countdown);
       if (this.engine) this.engine.stop();
       playerEl.classList.remove('open', 'ended'); document.body.classList.remove('locked');
@@ -192,6 +198,8 @@
       en.on('toast', (m) => this.toast(m));
       en.on('loaded', () => this.updTime(0));
     },
+    setAutoNext(on) { this.autoNext = !!on; try { localStorage.setItem('aura.autonext', on ? '1' : '0'); } catch (e) { /* noop */ } this.syncAuto(); },
+    syncAuto() { const on = this.autoNext; $('#bAuto').classList.toggle('on', on); $('#bAuto').setAttribute('aria-pressed', on ? 'true' : 'false'); $('#ecAuto').textContent = 'Auto-play next: ' + (on ? 'On' : 'Off'); $('#ecAuto').setAttribute('aria-pressed', on ? 'true' : 'false'); },
     sync() { $('#bCC').classList.toggle('off', !this.engine.subtitlesOn); $('#bMute').classList.toggle('off', this.engine.muted); this.updPlayIcon(); },
     updTime(t) { const d = this.engine.duration, p = t / d * 100; $('#sFill').style.width = p + '%'; $('#sKnob').style.left = p + '%'; $('#pTime').textContent = Aura.fmtTime(t) + ' / ' + Aura.fmtTime(d); },
     updPlayIcon() { $('#icPlay').innerHTML = this.engine && this.engine.playing ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>'; },
@@ -200,9 +208,16 @@
       $('#ecKicker').textContent = 'Episode ' + n + ' complete'; $('#ecTitle').textContent = nx ? 'Up next: ' + S.episodes[n].title : (n >= S.episodes.length ? 'The end. Amen.' : 'More episodes are on the way');
       $('#ecNext').style.display = nx ? '' : 'none';
       clearInterval(this.countdown);
-      if (nx) { let c = 8; $('#ecNextLabel').textContent = 'Next episode (' + c + ')'; this.countdown = setInterval(() => { c--; if (c <= 0) { clearInterval(this.countdown); this.open(n + 1); } else $('#ecNextLabel').textContent = 'Next episode (' + c + ')'; }, 1000); }
+      $('#ecNextLabel').textContent = 'Next episode';
+      /* auto-play next on: no end card, the next clip simply starts; off: the end card waits for the viewer */
+      /* a devotional reading plays only its own chosen episodes, then stops */
+      if (this.pl) {
+        if (this.pl.length) { const nn = this.pl.shift(); playerEl.classList.remove('ended'); this.open(nn, true); return; }
+        this.pl = null; $('#ecKicker').textContent = 'Reading complete'; $('#ecTitle').textContent = 'You have watched the animation for this reading'; return;
+      }
+      if (nx && this.autoNext) { playerEl.classList.remove('ended'); this.open(n + 1, true); }
     },
-    bumpUI() { playerEl.classList.remove('idle'); clearTimeout(this.idleT); this.idleT = setTimeout(() => { if (this.engine && this.engine.playing) playerEl.classList.add('idle'); }, 2800); },
+    bumpUI() { playerEl.classList.remove('idle'); clearTimeout(this.idleT); this.idleT = setTimeout(() => { const mp = document.getElementById('mixPanel'); if (this.engine && this.engine.playing && !(mp && !mp.hidden)) playerEl.classList.add('idle'); }, 2800); },
     toggle() { if (!this.engine || !this.engine.loaded) return; if (playerEl.classList.contains('ended')) { this.engine.seek(0); this.engine.play(); } else this.engine.toggle(); },
     cycleQuality() {
       const modes = ['auto', 'high', 'medium', 'low']; this.qMode = (this.qMode + 1) % 4; const m = modes[this.qMode];
@@ -218,8 +233,23 @@
   $('#bPlay').addEventListener('click', () => Player.toggle());
   $('#bigPlay').addEventListener('click', () => Player.toggle());
   stageEl.addEventListener('click', () => { if (isTouch && playerEl.classList.contains('idle')) { Player.bumpUI(); return; } Player.toggle(); Player.bumpUI(); });
+  $('#bAuto').addEventListener('click', () => { Player.setAutoNext(!Player.autoNext); Player.toast('Auto-play next: ' + (Player.autoNext ? 'On' : 'Off')); Player.bumpUI(); });
+  $('#ecAuto').addEventListener('click', () => { Player.setAutoNext(!Player.autoNext); });
+  Player.syncAuto();
   $('#bCC').addEventListener('click', () => { const e = Player.engine; e.setSubtitles(!e.subtitlesOn); Player.sync(); });
   $('#bMute').addEventListener('click', () => { const e = Player.engine; e.setMuted(!e.muted); Player.sync(); });
+  /* sound mix panel: music & effects, and voice-over, each on its own slider */
+  const mixPanel = $('#mixPanel'), mixBtn = $('#bMix'), mixM = $('#mixMusic'), mixV = $('#mixVoice');
+  function mixShow() { const e = Player.engine; if (!e) return; mixM.value = Math.round(e.mix.music * 100); mixV.value = Math.round(e.mix.voice * 100); $('#mixMusicV').textContent = mixM.value; $('#mixVoiceV').textContent = mixV.value; }
+  function mixOpen(on) { mixPanel.hidden = !on; mixBtn.classList.toggle('on', on); mixBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); if (on) { mixShow(); clearTimeout(Player.idleT); } else Player.bumpUI(); }
+  mixBtn.addEventListener('click', (ev) => { ev.stopPropagation(); mixOpen(mixPanel.hidden); });
+  mixPanel.addEventListener('click', (ev) => ev.stopPropagation());
+  mixPanel.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Escape') { mixOpen(false); mixBtn.focus(); } });
+  mixM.addEventListener('input', () => { Player.engine.setMix('music', mixM.value / 100); $('#mixMusicV').textContent = mixM.value; });
+  mixV.addEventListener('input', () => { Player.engine.setMix('voice', mixV.value / 100); $('#mixVoiceV').textContent = mixV.value; });
+  $('#mixReset').addEventListener('click', () => { Player.engine.setMix('music', 1); Player.engine.setMix('voice', 1); mixShow(); });
+  document.addEventListener('click', (ev) => { if (!mixPanel.hidden && !ev.target.closest('.mixwrap')) mixOpen(false); });
+  ['pointerdown', 'touchstart'].forEach((ev) => stageEl.addEventListener(ev, () => { if (!mixPanel.hidden) mixOpen(false); }, { passive: true }));
   $('#bQual').addEventListener('click', () => Player.cycleQuality());
   $('#bFull').addEventListener('click', () => Player.fullscreen());
   $('#pBack').addEventListener('click', () => Player.close());
@@ -251,7 +281,7 @@
       case 'c': case 'C': en.setSubtitles(!en.subtitlesOn); Player.sync(); break;
       case 'm': case 'M': en.setMuted(!en.muted); Player.sync(); break;
       case 'f': case 'F': Player.fullscreen(); break;
-      case 'n': case 'N': $('#bNext').click(); break; case 'p': case 'P': $('#bPrev').click(); break;
+      case 'a': case 'A': $('#bAuto').click(); break; case 'n': case 'N': $('#bNext').click(); break; case 'p': case 'P': $('#bPrev').click(); break;
       case 'Escape': if (!document.fullscreenElement) Player.close(); break;
       default: return;
     }
@@ -263,6 +293,18 @@
   Aura.Player = Player;
   dataReady.then(() => {
     markReady();
+    /* deep link from the devotional: ?watch=45,46,47 plays those episodes back to back (one tap needed so audio can start) */
+    try {
+      const wq = new URLSearchParams(location.search).get('watch');
+      const list = wq ? wq.split(',').map(Number).filter((x) => x > 0 && Aura.episodes[x]) : [];
+      if (list.length) {
+        const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(5,6,12,.88);backdrop-filter:blur(8px)';
+        ov.innerHTML = '<div style="text-align:center;font-family:inherit;color:#fff"><div style="letter-spacing:.3em;font-size:12px;text-transform:uppercase;opacity:.7;margin-bottom:14px">From the devotional</div><div style="font-size:26px;margin-bottom:22px">' + (list.length > 1 ? 'Episodes ' + list[0] + '\u2013' + list[list.length - 1] : 'Episode ' + list[0]) + '</div><button class="btn primary" id="wqGo"><i class="tri"></i><span>Play the reading</span></button><div><a href="#" id="wqNo" style="display:inline-block;margin-top:18px;opacity:.7;font-size:14px;color:#fff">Not now</a></div></div>';
+        document.body.appendChild(ov);
+        ov.querySelector('#wqGo').addEventListener('click', () => { ov.remove(); Player.open(list[0]); Player.pl = list.slice(1); });
+        ov.querySelector('#wqNo').addEventListener('click', (e) => { e.preventDefault(); ov.remove(); });
+      }
+    } catch (e) { /* noop */ }
     const m = /^#ep(\d+)$/.exec(location.hash);
     if (m && Aura.episodes[+m[1]]) { /* deep link: wait for a tap so audio can start */ Player.toast('Tap "Watch now" to begin Episode ' + m[1]); }
   });

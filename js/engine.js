@@ -185,6 +185,9 @@
 
       this.listeners = {};
       this.subtitlesOn = true; this.muted = false; this.volume = 0.9;
+      /* viewer mix: music & sound effects (the score) and the recorded voice-over have separate levels, 0..1 */
+      this.mix = { music: 1, voice: 1 };
+      try { const m = JSON.parse(localStorage.getItem('aura.mix') || 'null'); if (m) { if (isFinite(m.music)) this.mix.music = Math.min(1, Math.max(0, +m.music)); if (isFinite(m.voice)) this.mix.voice = Math.min(1, Math.max(0, +m.voice)); } } catch (e) { /* noop */ }
       this.quality = 'high'; this.autoQuality = true;
       this.playing = false; this._t = 0; this.duration = 60; this.loaded = false;
       this._sources = []; this._frames = []; this._lastTs = 0;
@@ -404,7 +407,9 @@
       const comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -16; comp.knee.value = 24; comp.ratio.value = 3.5; comp.attack.value = 0.01; comp.release.value = 0.3;
       this.master.connect(comp); comp.connect(ctx.destination);
-      this.bus = ctx.createGain(); this.bus.connect(this.master);
+      this.musicGain = ctx.createGain(); this.musicGain.gain.value = this.mix.music; this.musicGain.connect(this.master);
+      this.voiceGain = ctx.createGain(); this.voiceGain.gain.value = this.mix.voice; this.voiceGain.connect(this.master);
+      this.bus = ctx.createGain(); this.bus.connect(this.musicGain);
       this.reverb = ctx.createConvolver();
       const len = (ctx.sampleRate * 3.8) | 0, ir = ctx.createBuffer(2, len, ctx.sampleRate);
       for (let c = 0; c < 2; c++) {
@@ -412,7 +417,7 @@
         for (let i = 0; i < len; i++) { const k = 1 - i / len; lp += (((Math.random() * 2 - 1) * Math.pow(k, 2.6)) - lp) * 0.55; d[i] = lp * 1.6; }
       }
       this.reverb.buffer = ir;
-      const wet = ctx.createGain(); wet.gain.value = 0.85; this.reverb.connect(wet); wet.connect(this.master);
+      const wet = ctx.createGain(); wet.gain.value = 0.85; this.reverb.connect(wet); wet.connect(this.musicGain);
       const nlen = ctx.sampleRate * 3, nb = ctx.createBuffer(1, nlen, ctx.sampleRate), nd = nb.getChannelData(0);
       let b0 = 0, b1 = 0, b2 = 0;
       for (let i = 0; i < nlen; i++) { const wn = Math.random() * 2 - 1; b0 = 0.99765 * b0 + wn * 0.099046; b1 = 0.963 * b1 + wn * 0.2965164; b2 = 0.57 * b2 + wn * 1.0526913; nd[i] = (b0 + b1 + b2 + wn * 0.1848) * 0.2; }
@@ -449,6 +454,16 @@
     }
     restart() { this.seek(0); if (!this.playing) this.play(); }
     setMuted(m) { this.muted = m; if (this.master) this.master.gain.value = m ? 0 : this.volume; if (this.vo) this.vo.muted = m; }
+    /* kind: 'music' (score + sound effects) or 'voice' (recorded voice-over); v: 0..1 */
+    setMix(kind, v) {
+      if (kind !== 'music' && kind !== 'voice') return;
+      v = Math.min(1, Math.max(0, +v || 0)); this.mix[kind] = v;
+      const g = kind === 'music' ? this.musicGain : this.voiceGain;
+      if (g && this.actx) { try { g.gain.setTargetAtTime(v, this.actx.currentTime, 0.02); } catch (e) { g.gain.value = v; } }
+      if (kind === 'voice' && this.vo && !this.vo._wired) this.vo.volume = v;
+      try { localStorage.setItem('aura.mix', JSON.stringify(this.mix)); } catch (e) { /* noop */ }
+      this.emit('mix', this.mix);
+    }
     setSubtitles(on) { this.subtitlesOn = on; if (this.loaded) this._updateCues(this.time); }
 
     _startLoop() { if (this._raf) return; const loop = () => { this._raf = requestAnimationFrame(loop); this._frame(); }; this._raf = requestAnimationFrame(loop); }
@@ -477,10 +492,14 @@
       /* studio / saved-recording hook (Web Audio, sample-accurate). If it claims playback, the <audio> fallback stays silent. */
       if (this.voHook && this.actx) {
         let claimed = false;
-        try { claimed = !!this.voHook.start(this.actx, this.master, t, this.actx.currentTime + 0.08); } catch (e) { console.error('voice hook error', e); }
+        try { claimed = !!this.voHook.start(this.actx, this.voiceGain || this.master, t, this.actx.currentTime + 0.08); } catch (e) { console.error('voice hook error', e); }
         if (claimed) { if (this.vo) { try { this.vo.pause(); } catch (e) { /* noop */ } } return; }
       }
-      const a = this.vo; if (!a) return; try { a.currentTime = t; const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* noop */ } }
+      const a = this.vo; if (!a) return;
+      /* route the saved mp3 through the voice bus so it has its own level (iPads ignore element.volume); fall back to element.volume */
+      if (!a._wired && this.actx && this.voiceGain && /^https?:/.test(location.protocol)) { try { this.actx.createMediaElementSource(a).connect(this.voiceGain); a._wired = true; } catch (e) { /* noop */ } }
+      if (!a._wired) a.volume = this.mix.voice;
+      try { a.currentTime = t; const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* noop */ } }
 
     /* --------------------------------------------------------- score */
     _stopSources() {

@@ -55,7 +55,10 @@
     renderAt(t) {
       if (!this.loaded) return;
       px.target(this.surf.u32);
-      try { this.ep.render(t, this.ctx); } catch (e) { console.error('pixel render error', e); }
+      /* auto-play continuation: hide the opening title text (shared title card and the hand-drawn ones in the early episodes) */
+      const hide = Aura.suppressTitle && t < 8, keepText = px.text;
+      if (hide) px.text = () => {};
+      try { this.ep.render(t, this.ctx); } catch (e) { console.error('pixel render error', e); } finally { if (hide) px.text = keepText; }
       this.g.putImageData(this.img, 0, 0);
       this._updateTitles(t); this._updateCues(t);
     }
