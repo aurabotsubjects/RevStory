@@ -57,7 +57,39 @@ then list its file in `js/built.js`. 3D and pixel episodes can be mixed; the pla
 - Episode 13 — Philadelphia: The Hour of Trial (Rev 3:10–13): **pixel cut built** (`px-013.js`, 58 s). A dial reaches its hour; the dark front covers the world and the town is kept under a dome of light; light falls from the door ("coming quickly"); hands of shadow cannot take the crown; a pillar rises in a temple with three names; a city comes down out of heaven; the voice ripples out; the light dims to a lukewarm haze.
 - Episode 14 — Laodicea: Neither Hot nor Cold (Rev 3:14–19): **pixel cut built** (`px-014.js`, 64 s). Tepid palette; a steady beam and the beginning of creation; hot and cold streams become one tepid pool and are blasted out; a gold robe drains to grey and a haze closes in; gold refined in fire, a white cloth, a drop of light on the eyes; colour returns with a steady dawn; the light dims to a door in the dark and a knock.
 - Episode 15 — Behold, I Stand at the Door (Rev 3:20–22): **pixel cut built** (`px-015.js`, 48 s). Two knocks, light under the door, a hand on the handle, the door opens; a table for two; the two seated on one throne with the Father's throne of light behind; seven lamps light one by one; a door stands open in the sky (handoff to Part II). **Part I (Episodes 1–15) is complete.**
+- Episode 16 — A Door Standing Open in Heaven (Rev 4:1–5): **pixel cut built** (`px-016.js`, 72 s). The open door, a trumpet voice, the ascent, the throne of jasper and ruby, the emerald rainbow, twenty-four elders, lightning, seven lamps.
+- Episode 17 — Holy, Holy, Holy (Rev 4:6–11): **built** (`px-017.js`, 94 s). The sea of glass, the four living creatures, the elders' crowns.
+- Episode 18 — The Scroll Nobody Could Open (Rev 5:1–5): **built** (`px-018.js`, 66 s). The sealed scroll, the angel's question, silence, John weeping, the Lion.
+- Episode 19 — The Lamb Who Was Slain (Rev 5:6–10): **built** (`px-019.js`, 78 s). The Lamb takes the scroll; harps, incense, the new song.
+- Episode 20 — Worthy Is the Lamb (Rev 5:11–14): **built** (`px-020.js`, 64 s). The endless host, seven pulses, every creature, Amen, the first seal. **Part II (Episodes 16–20) is complete; next is Ep 21 (Part III, The Seven Seals).**
+- Episode 21 — Come! The White Horse and the Red (Rev 6:1–4): **pixel cut built** (`px-021.js`, 60 s). The first seal cracks; the white horse and bow, the red horse and the great sword.
+- Episode 22 — The Black Horse and the Pale Horse (Rev 6:5–8): **pixel cut built** (`px-022.js`, 68 s). Scales and grain, the oil and wine untouched; the pale horse, Death and Hades, a quarter of the earth.
+- Episode 23 — How Long, Sovereign Lord? (Rev 6:9–11): **pixel cut built** (`px-023.js`, 56 s). Under the golden altar, souls of light, white robes unfurl; the sixth seal.
+- Episode 24 — The Sky Rolls Up (Rev 6:12–14): **pixel cut built** (`px-024.js`, 46 s). Earthquake, black sun, blood moon, falling stars, the sky rolled like a scroll.
+- Episode 25 — Who Can Withstand? (Rev 6:15–17): **pixel cut built** (`px-025.js`, 50 s). Caves, the cry to the rocks, silence, four points of light.
+- Episode 26 — The Four Winds Held Back (Rev 7:1–3): **pixel cut built** (`px-026.js`, 54 s). The frozen world, four angels, the angel from the east with the seal.
+- Episode 27 — The Twelve Tribes Sealed (Rev 7:4–8): **pixel cut built** (`px-027.js`, 62 s). Twelve tribe lights ignite in a ring; it opens onto a crowd.
+- Episode 28 — A Great Multitude (Rev 7:9–12): **pixel cut built** (`px-028.js`, 60 s). From one figure to an uncountable crowd with palms; the sevenfold amen.
+- Episode 29 — Out of the Great Tribulation (Rev 7:13–17): **pixel cut built** (`px-029.js`, 70 s). Robes washed white, the shelter, the Lamb the shepherd, the tear wiped away.
+- Episode 30 — Silence in Heaven (Rev 8:1–6): **pixel cut built** (`px-030.js`, 76 s). The seventh seal, near-eight seconds of silence, seven trumpets, the censer hurled to earth.
+  **Part III (Episodes 21–30) is complete.**
+- Episodes 31–44 (Part IV, The Seven Trumpets, Rev 8:7 – 11:19): **built** (`px-031.js` … `px-044.js`): hail and fire and the burning mountain, Wormwood and the darkened sky, the Abyss, Abaddon, the four angels, fire/smoke/sulfur, the mighty angel and seven thunders, no more delay, take and eat, measuring the temple, the two witnesses, their fall, Come up here, and the Kingdom of our Lord. **Part IV is complete.**
+- Episodes 45–59 (Part V, The Woman and the Dragon, Rev 12:1 – 14:20): **built** (`px-045.js` … `px-059.js`): the woman and the dragon, war in heaven, the accuser, the eagle's wings, the beast from the sea, forty-two months, the second beast, the mark, Mount Zion, Fallen Babylon, the cup of wrath, Blessed are the dead, the harvest and the great winepress. **Part V is complete.**
+- Episodes 60–66 (Part VI, The Seven Bowls, Rev 15:1 – 16:21): **built** (`px-060.js` … `px-066.js`): the song of Moses and the Lamb, the seven golden bowls, the first two bowls, the third bowl, bowls four and five, Armageddon, and It Is Done. **Part VI is complete.**
+- Episodes 67–78 (Part VII, The Fall of Babylon, Rev 17:1 – 18:24): **built** (`px-067.js` … `px-078.js`): Come I will show you, Mystery Babylon, the beast that was and is not, the ten kings and the Lamb, the waters and the city, Fallen Fallen, Come out of her, the kings weep, the merchants weep, In one hour, Rejoice over her, and the millstone. **Part VII is complete.**
+- Episodes 79–85 (Part VIII, The Return of the King, Rev 19:1–21): **built** (`px-079.js` … `px-085.js`): Hallelujah, the wedding of the Lamb, blessed are those invited, Faithful and True, King of kings and Lord of lords, the great supper of God, and the beast is captured. **Part VIII is complete; next is Ep 86 (Part IX, The Thousand Years and the Judgment).**
 - Episodes 16–102: outlined in `REVELATION_SERIES_PLAN.md`
 
 ## Sound mix
 The player's sliders button (next to the speaker) opens a two-slider mixer: **Music & effects** (the procedural score) and **Voice-over** (recorded audio / Voice Studio), each 0–100%. Levels are remembered per device (`localStorage['aura.mix']`). The speaker button / `M` key still mutes everything.
+
+## Auto-play next
+The double-arrow button in the control bar (or the `A` key) turns **Auto-play next** on or off, and the choice is remembered per device. On (the default): when an episode ends the next one starts straight away, with no end card, so the clips play back to back. Off: the end card waits for the viewer, who can switch the setting from the card too.
+
+With auto-play on, episode title cards are skipped on the continuation so the clips flow, except when a new Part begins (Eps 16, 21, 31, 45 and so on), which keeps its title. Starting an episode yourself, or with auto-play off, always shows the title.
+
+
+## Devotional study
+The 70-day Revelation devotional lives in `devotional/` (opened from the Devotional button in the top bar, the hero, and the menu; a Series button inside it returns here). All 70 hero images are done (`devotional/images/day-01.webp` … `day-70.webp`, 1600×900). A new `day-NN.webp` dropped into that folder replaces the picture automatically.
+
+**Watch buttons in the devotional.** Each devotion's Read section shows a "Watch the animation" button when the reading includes Revelation verses that have been animated. It links to `index.html?watch=45,46`, which asks for one tap (so audio can start), plays those episodes back to back, then stops. The devotional reads `js/series-data.js` and `js/built.js`, so new episodes light up automatically as they are added.
